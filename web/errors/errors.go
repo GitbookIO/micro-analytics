@@ -1,5 +1,11 @@
 package errors
 
+var InsertFailed = RequestError{
+    Code:       "InsertFailed",
+    Message:    "Failed to insert your analytics. Please try again.",
+    statusCode: 500,
+}
+
 var InternalError = RequestError{
     Code:       "InternalError",
     Message:    "We encountered an internal error. Please try again.",

@@ -6,8 +6,8 @@ import (
 
 type RequestError struct {
     statusCode  int
-    Code        string  `json="code"`
-    Message     string  `json="message"`
+    Code        string  `json:"code"`
+    Message     string  `json:"message"`
 }
 
 // Normalize RequestError statusCode
@@ -23,8 +23,8 @@ func (e *RequestError) Error() string {
     return e.Message
 }
 
-// Generate a RequestError from informations
-func genError(code int, codeStr string, err string, a ...interface{}) *RequestError {
+// Produce RequestError
+func Errorf(code int, codeStr string, err string, a ...interface{}) *RequestError {
     return &RequestError{
         statusCode: code,
         Code:       codeStr,
