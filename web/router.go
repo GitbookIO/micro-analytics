@@ -4,6 +4,7 @@ import (
     "encoding/json"
     "log"
     "net/http"
+    "net/url"
     "os"
     "path"
 
@@ -53,7 +54,7 @@ func NewRouter(mainDir string) http.Handler {
         // Error reading file -> Log
         if err != nil {
             log.Printf("Error [%#v] trying to reach file '%s'\n", err, dbPath)
-            renderError(w, &errors.InvalidDatabaseName)
+            renderError(w, &errors.InternalError)
             return
         }
 
@@ -80,11 +81,12 @@ func NewRouter(mainDir string) http.Handler {
         Methods("POST").
         HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
+
         // Get dbName from URL
         vars := mux.Vars(req)
         dbName := vars["dbName"]
 
-        // Open DB
+        // // Open DB
         db, err := database.OpenOrCreate(dbName)
         if err != nil {
             log.Fatal("Error opening or creating DB", err)
@@ -92,9 +94,9 @@ func NewRouter(mainDir string) http.Handler {
         defer db.Close()
 
         // Parse JSON POST data
-        analytic := database.Analytic{}
+        postData := PostData{}
         jsonDecoder := json.NewDecoder(req.Body)
-        err = jsonDecoder.Decode(&analytic)
+        err = jsonDecoder.Decode(&postData)
 
         // Invalid JSON
         if err != nil {
@@ -102,9 +104,42 @@ func NewRouter(mainDir string) http.Handler {
             return
         }
 
+        // Create Analytic to inject in DB
+        analytic := database.Analytic{}
+
+        // Set time if not in POST data
+        if postData.Time != nil {
+            analytic.Time = postData.Time
+        } else {
+            analytic.Time = time.Now()
+        }
+        analytic.Type = postData.Type
+        analytic.Path = postData.Path
+        analytic.Ip = postData.Ip
+
+        // Get referer from headers
+        referrerURL, err := url.ParseRequestURI(postData.Headers["referer"])
+        if err == nil {
+            analytic.RefererDomain = referrerURL.Host
+        }
+
+        // Get platform from headers
+        analytic.Platform = utils.Platform(postData.Headers["user-agent"])
+
+        // Get countryCode from GeoIp
+        analytic.CountryCode = utils.GeoIpLookup(postData.Ip)
+
+        log.Printf("%#v\n", analytic)
+
         // Insert data if everything's OK
-        database.Insert(db, analytic)
-        log.Printf("Successfully inserted analytic: %#v", analytic)
+        err = database.Insert(db, analytic)
+        if err != nil {
+            renderError(w, &errors.InsertFailed)
+            return
+        }
+
+        // log.Printf("Successfully inserted analytic: %#v", analytic)
+        render(w, nil, nil)
     })
 
     // Delete a DB

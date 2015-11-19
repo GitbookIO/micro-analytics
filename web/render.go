@@ -39,6 +39,7 @@ func renderError(w http.ResponseWriter, err error) {
 func renderRequestError(w http.ResponseWriter, err *errors.RequestError) {
     w.WriteHeader(err.StatusCode())
 
+    w.Header().Set("Content-Type", "application/json")
     if err := jsonMarshal(w, err); err != nil {
         genericError(w, err)
     }
