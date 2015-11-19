@@ -6,38 +6,58 @@ import (
     "time"
 
     _ "github.com/mattn/go-sqlite3"
+    sq "github.com/Masterminds/squirrel"
 )
 
-func Insert(db *sql.DB, analytic Analytic) {
+func Insert(db *sql.DB, analytic Analytic) error {
     // Query
-    insertQuery := `
-    INSERT INTO visits(time, type, path, ip, platform, refererDomain, countryCode)
-    VALUES(?, ?, ?, ?, ?, ?, ?)`
+    // insertQuery := `
+    // INSERT INTO visits(time, type, path, ip, platform, refererDomain, countryCode)
+    // VALUES(?, ?, ?, ?, ?, ?, ?)`
+    insertQuery := sq.
+        Insert("visits").
+        Columns("time", "type", "path", "ip", "platform", "refererDomain", "countryCode").
+        Values(time.Now(),
+            analytic.Type,
+            analytic.Path,
+            analytic.Ip,
+            analytic.Platform,
+            analytic.RefererDomain,
+            analytic.CountryCode).
+        RunWith(db)
 
-    // Create transaction
-    tx, err := db.Begin()
+    _, err := insertQuery.Exec()
     if err != nil {
-        log.Fatal("Error creating transaction", err)
+        log.Printf("Error inserting analytic: %#v\n", analytic)
+        log.Printf("%v\n", err)
+        return err
     }
 
-    // Create statement
-    stmt, err := tx.Prepare(insertQuery)
-    if err != nil {
-        log.Fatal("Error preparing transaction", err)
-    }
-    defer stmt.Close()
+    return nil
+    // // Create transaction
+    // tx, err := db.Begin()
+    // if err != nil {
+    //     log.Fatal("Error creating transaction", err)
+    // }
 
-    _, err = stmt.Exec(time.Now(),
-        analytic.Type,
-        analytic.Path,
-        analytic.Ip,
-        analytic.Platform,
-        analytic.RefererDomain,
-        analytic.CountryCode)
+    // // Create statement
+    // stmt, err := tx.Prepare(insertQuery)
+    // if err != nil {
+    //     log.Fatal("Error preparing transaction", err)
+    // }
+    // defer stmt.Close()
 
-    if err != nil {
-        log.Fatal("Error inserting row", err)
-    }
+    // _, err = stmt.Exec(time.Now(),
+    //     analytic.Type,
+    //     analytic.Path,
+    //     analytic.Ip,
+    //     analytic.Platform,
+    //     analytic.RefererDomain,
+    //     analytic.CountryCode)
 
-    tx.Commit()
+    // if err != nil {
+    //     log.Fatal("Error inserting row", err)
+    // }
+
+    // tx.Commit()
 }

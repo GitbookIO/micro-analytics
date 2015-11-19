@@ -3,11 +3,17 @@ package database
 import (
     "database/sql"
     "log"
+
+    sq "github.com/Masterminds/squirrel"
 )
 
 func Query(db *sql.DB) []Analytic {
     // Query
-    query := `SELECT time, type, path, ip, platform, refererDomain, countryCode FROM visits`
+    // query := `SELECT time, type, path, ip, platform, refererDomain, countryCode FROM visits`
+    query, _, err := sq.
+        Select("time", "type", "path", "ip", "platform", "refererDomain", "countryCode").
+        From("visits").
+        ToSql()
 
     // Exec query
     rows, err := db.Query(query)
@@ -16,7 +22,7 @@ func Query(db *sql.DB) []Analytic {
     }
     defer rows.Close()
 
-    analytics := make([]Analytic, 0)
+    analytics := []Analytic{}
     for rows.Next() {
         analytic := Analytic{}
         rows.Scan(&analytic.Time,
