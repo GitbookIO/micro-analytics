@@ -10,15 +10,16 @@ import (
 )
 
 type ServerOpts struct {
-    Port        string `json:"port"`
-    Directory   string `json:"directory"`
-    Version     string `json:"version"`
+    Port        string  `json:"port"`
+    Directory   string  `json:"directory"`
+    MaxDBs      int     `json:"maxDBs"`
+    Version     string  `json:"version"`
 }
 
 // Build a http.Server based on the options
 func NewServer(opts ServerOpts) (*http.Server, error) {
     // Define handler
-    handler := web.NewRouter(opts.Directory)
+    handler := web.NewRouter(opts.Directory, opts.MaxDBs)
 
     // Use logging
     handler = handlers.LoggingHandler(os.Stderr, handler)

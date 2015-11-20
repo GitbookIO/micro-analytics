@@ -32,6 +32,11 @@ func main() {
             Value:  "./dbs/",
             Usage:  "Database directory",
         },
+        cli.IntFlag{
+            Name:   "connections, c",
+            Value:  10,
+            Usage:  "Max number of alive DB connections",
+        },
     }
 
     // Main app code
@@ -39,11 +44,12 @@ func main() {
         // Extract options from CLI args
         opts := ServerOpts{
             Port:       normalizePort(ctx.String("port")),
-            Directory:     path.Clean(ctx.String("directory")),
+            Directory:  path.Clean(ctx.String("directory")),
+            MaxDBs:     ctx.Int("connections"),
             Version:    app.Version,
         }
 
-        log.Printf("%#v\n\n", opts)
+        log.Printf("Launching server with: %#v\n\n", opts)
 
         // Create Analytics directory if inexistant
         dirExists, err := utils.PathExists(opts.Directory)

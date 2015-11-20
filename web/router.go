@@ -5,8 +5,7 @@ import (
     "log"
     "net/http"
     "net/url"
-    "os"
-    "path"
+    "time"
 
     "github.com/gorilla/mux"
 
@@ -15,14 +14,16 @@ import (
     "github.com/GitbookIO/analytics/web/errors"
 )
 
-func NewRouter(mainDir string) http.Handler {
+func NewRouter(mainDir string, maxDBs int) http.Handler {
+    // Create the app DB manager
+    dbManager := database.NewManager(mainDir, maxDBs)
+
+    // Create the app router
     r := mux.NewRouter()
 
-    ////
-    // Service methods
-    ////
-
+    /////
     // Welcome
+    /////
     r.Path("/").
         Methods("GET").
         HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -33,7 +34,62 @@ func NewRouter(mainDir string) http.Handler {
         render(w, msg, nil)
     })
 
-    // Query a DB
+    /////
+    // Query a DB by property
+    /////
+    r.Path("/{dbName}/{property}").
+        Methods("GET").
+        HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+        // Map of allowed requests
+        allowedProperties := map[string]bool{
+            "countries": true,
+            "platforms": true,
+            "domains": true,
+            "types":true,
+        }
+        // Get params from URL
+        vars := mux.Vars(req)
+        dbName := vars["dbName"]
+        property := vars["property"]
+
+        // Check that property is allowed to be queried
+        if _, ok := allowedProperties[property]; !ok {
+            renderError(w, &errors.InvalidProperty)
+            return
+        }
+
+        // Check if DB file exists
+        dbExists, err := dbManager.DBExists(dbName)
+        if err != nil {
+            renderError(w, &errors.InternalError)
+            return
+        }
+
+        // DB doesn't exist
+        if !dbExists {
+            renderError(w, &errors.InvalidDatabaseName)
+            return
+        }
+
+        // Parse request query
+        if err := req.ParseForm(); err != nil {
+            renderError(w, err)
+            return
+        }
+
+        // Return query result
+        db, err := dbManager.GetDB(dbName)
+        if err != nil {
+            renderError(w, &errors.InternalError)
+            return
+        }
+        analytics := db.Query()
+        render(w, analytics, nil)
+    })
+
+    /////
+    // Full query a DB
+    /////
     r.Path("/{dbName}").
         Methods("GET").
         HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -48,12 +104,9 @@ func NewRouter(mainDir string) http.Handler {
         vars := mux.Vars(req)
         dbName := vars["dbName"]
 
-        // Check if DB exists
-        dbPath := path.Join(mainDir, dbName, "analytics.db")
-        dbExists, err := utils.PathExists(dbPath)
-        // Error reading file -> Log
+        // Check if DB file exists
+        dbExists, err := dbManager.DBExists(dbName)
         if err != nil {
-            log.Printf("Error [%#v] trying to reach file '%s'\n", err, dbPath)
             renderError(w, &errors.InternalError)
             return
         }
@@ -64,39 +117,31 @@ func NewRouter(mainDir string) http.Handler {
             return
         }
 
-        // Open DB
-        db, err := database.OpenOrCreate(dbName)
-        if err != nil {
-            log.Fatal("Error opening or creating DB", err)
-        }
-        defer db.Close()
-
         // Return query result
-        analytics := database.Query(db)
+        db, err := dbManager.GetDB(dbName)
+        if err != nil {
+            renderError(w, &errors.InternalError)
+            return
+        }
+        analytics := db.Query()
         render(w, analytics, nil)
     })
 
+    /////
     // Push analytics to a DB
+    /////
     r.Path("/{dbName}").
         Methods("POST").
         HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-
 
         // Get dbName from URL
         vars := mux.Vars(req)
         dbName := vars["dbName"]
 
-        // // Open DB
-        db, err := database.OpenOrCreate(dbName)
-        if err != nil {
-            log.Fatal("Error opening or creating DB", err)
-        }
-        defer db.Close()
-
         // Parse JSON POST data
         postData := PostData{}
         jsonDecoder := json.NewDecoder(req.Body)
-        err = jsonDecoder.Decode(&postData)
+        err := jsonDecoder.Decode(&postData)
 
         // Invalid JSON
         if err != nil {
@@ -105,21 +150,21 @@ func NewRouter(mainDir string) http.Handler {
         }
 
         // Create Analytic to inject in DB
-        analytic := database.Analytic{}
-
-        // Set time if not in POST data
-        if postData.Time != nil {
-            analytic.Time = postData.Time
-        } else {
-            analytic.Time = time.Now()
+        analytic := database.Analytic{
+            Time:   time.Now(),
+            Type:   postData.Type,
+            Path:   postData.Path,
+            Ip:     postData.Ip,
         }
-        analytic.Type = postData.Type
-        analytic.Path = postData.Path
-        analytic.Ip = postData.Ip
+
+        // Set time from POST data if passed
+        if len(postData.Time) > 0 {
+            analytic.Time, err = time.Parse(time.RFC3339, postData.Time)
+        }
 
         // Get referer from headers
-        referrerURL, err := url.ParseRequestURI(postData.Headers["referer"])
-        if err == nil {
+        refererHeader := postData.Headers["referer"]
+        if referrerURL, err := url.ParseRequestURI(refererHeader); err == nil {
             analytic.RefererDomain = referrerURL.Host
         }
 
@@ -129,20 +174,24 @@ func NewRouter(mainDir string) http.Handler {
         // Get countryCode from GeoIp
         analytic.CountryCode = utils.GeoIpLookup(postData.Ip)
 
-        log.Printf("%#v\n", analytic)
-
         // Insert data if everything's OK
-        err = database.Insert(db, analytic)
+        db, err := dbManager.GetDB(dbName)
         if err != nil {
+            renderError(w, &errors.InternalError)
+            return
+        }
+        if err = db.Insert(analytic); err != nil {
             renderError(w, &errors.InsertFailed)
             return
         }
 
-        // log.Printf("Successfully inserted analytic: %#v", analytic)
+        log.Printf("[Router] Successfully inserted analytic: %#v", analytic)
         render(w, nil, nil)
     })
 
+    /////
     // Delete a DB
+    /////
     r.Path("/{dbName}").
         Methods("DELETE").
         HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -152,8 +201,8 @@ func NewRouter(mainDir string) http.Handler {
         dbName := vars["dbName"]
 
         // Delete full DB directory
-        dbDir := path.Join(mainDir, dbName)
-        os.RemoveAll(dbDir)
+        err := dbManager.DeleteDB(dbName)
+        render(w, nil, err)
     })
 
     return r

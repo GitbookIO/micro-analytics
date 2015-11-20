@@ -23,3 +23,9 @@ var InvalidJSON = RequestError{
     Message:    "Invalid JSON in request body. Please check and retry.",
     statusCode: 400,
 }
+
+var InvalidProperty = RequestError{
+    Code:       "InvalidProperty",
+    Message:    "Invalid request property. Please check and retry.",
+    statusCode: 405,
+}

@@ -1,13 +1,13 @@
 package database
 
 import (
-    "database/sql"
     "log"
 
     sq "github.com/Masterminds/squirrel"
 )
 
-func Query(db *sql.DB) []Analytic {
+// Wrapper for querying a Database struct
+func (db *Database) Query() []Analytic {
     // Query
     // query := `SELECT time, type, path, ip, platform, refererDomain, countryCode FROM visits`
     query, _, err := sq.
@@ -16,7 +16,7 @@ func Query(db *sql.DB) []Analytic {
         ToSql()
 
     // Exec query
-    rows, err := db.Query(query)
+    rows, err := db.Conn.Query(query)
     if err != nil {
         log.Fatal("Error querying DB", err)
     }
