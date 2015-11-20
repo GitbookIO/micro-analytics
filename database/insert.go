@@ -1,7 +1,6 @@
 package database
 
 import (
-    "database/sql"
     "log"
     "time"
 
@@ -9,7 +8,8 @@ import (
     sq "github.com/Masterminds/squirrel"
 )
 
-func Insert(db *sql.DB, analytic Analytic) error {
+// Wrapper for inserting through a Database struct
+func (db *Database) Insert(analytic Analytic) error {
     // Query
     // insertQuery := `
     // INSERT INTO visits(time, type, path, ip, platform, refererDomain, countryCode)
@@ -24,7 +24,7 @@ func Insert(db *sql.DB, analytic Analytic) error {
             analytic.Platform,
             analytic.RefererDomain,
             analytic.CountryCode).
-        RunWith(db)
+        RunWith(db.Conn)
 
     _, err := insertQuery.Exec()
     if err != nil {

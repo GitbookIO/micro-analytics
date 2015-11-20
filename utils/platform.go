@@ -25,8 +25,8 @@ func Platform(ua string) string {
         regexp.MustCompile(`(?i)curl`): "Curl",
     }
 
-    for r, p := range platforms {
-        if r.MatchString(ua) {
+    for regex, p := range platforms {
+        if regex.MatchString(ua) {
             platform = p
             break
         }

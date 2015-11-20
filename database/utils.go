@@ -13,7 +13,7 @@ func TableExists(db *sql.DB) bool {
     // Execute query
     rows, err := db.Query(existsQuery)
     if err != nil {
-        log.Fatal("Error querying DB\n", err)
+        log.Fatal("[DBUtils] Error checking if table exists\n", err)
     }
     defer rows.Close()
 
