@@ -15,7 +15,7 @@ Each shard thus only contains a specific website data, allowing faster response 
 
 ## Analytics schema
 
-All shards of the Analytics database share the same schema :
+All shards of the Analytics database share the same TABLE schema :
 ```SQL
 CREATE TABLE visits (
     time            TIMESTAMP,
@@ -28,14 +28,12 @@ CREATE TABLE visits (
 )
 ```
 
-While `platform`, `refererDomain` and `countryCode` are automatically deduced the headers, the `type` value can be used to store any kind of event.
-
 
 ## Service requests
 
 ### GET requests
 
-**Common Parameters**
+##### Common Parameters
 
 Every query for a specific website can be executed using a time range.
 Every following GET request thus takes the two following optional query string parameters :
@@ -45,7 +43,7 @@ Name | Type | Description | Default | Example
 `start` | Date | Start date to query a range | none | `"2015-11-24T12:00:00.000Z"`
 `end` | Date | End date to query a range | none | `"2015-11-24T20:00:00.000Z"`
 
-**Common Response Values**
+##### Common Response Values
 
 Name | Type | Description
 ---- | ---- | ----
