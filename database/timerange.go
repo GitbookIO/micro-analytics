@@ -40,7 +40,7 @@ func NewTimeRange(start string, end string) (*TimeRange, error) {
 
     // Ensure endTime < startTime
     if len(start) > 0 && len(end) > 0 && endTime.Before(startTime) {
-        err := errors.New("end must be before start in a TimeRange")
+        err := errors.New("start must be before end in a TimeRange")
         return nil, err
     }
 
