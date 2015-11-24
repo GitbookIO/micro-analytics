@@ -5,6 +5,7 @@ import (
     "net"
 
     "github.com/oschwald/maxminddb-golang"
+    "github.com/GitbookIO/geo-utils-go"
 )
 
 type lookupResult struct {
@@ -30,4 +31,9 @@ func GeoIpLookup(ipStr string) string {
     }
 
     return result.Country.ISOCode
+}
+
+// Return a country fullname from countryCode
+func GetCountry(countryCode string) string {
+    return geoutils.GetCountry(countryCode)
 }
