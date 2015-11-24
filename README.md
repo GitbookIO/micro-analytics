@@ -40,17 +40,17 @@ While `platform`, `refererDomain` and `countryCode` are automatically deduced th
 Every query for a specific website can be executed using a time range.
 Every following GET request thus takes the two following optional query string parameters :
 
-| Name | Type | Description | Default | Example
-| -- | -- | -- | -- | -- |
-| `start` | Date | Start date to query a range | none | `"2015-11-24T12:00:00.000Z"` |
-| `end` | Date | End date to query a range | none | `"2015-11-24T20:00:00.000Z"` |
+Name | Type | Description | Default | Example
+---- | ---- | ---- | ---- | ----
+`start` | Date | Start date to query a range | none | `"2015-11-24T12:00:00.000Z"`
+`end` | Date | End date to query a range | none | `"2015-11-24T20:00:00.000Z"`
 
 **Common Response Values**
 
-| Name | Type | Description |
-| -- | -- | -- |
-| `total` | Integer | Total number of visits |
-| `unique` | Integer | Total number of unique visitors based on `ip` |
+Name | Type | Description
+---- | ---- | ----
+`total` | Integer | Total number of visits
+`unique` | Integer | Total number of unique visitors based on `ip`
 
 
 #### GET `/:website/countries`
@@ -141,9 +141,9 @@ Returns the number of visits as a time serie. The interval in seconds can be spe
 
 ##### Parameters
 
-| Name | Type | Description | Default | Example
-| -- | -- | -- | -- | -- |
-| `interval` | Integer | Interval of the time serie | `86400` (1 day) | `3600` |
+Name | Type | Description | Default | Example
+---- | ---- | ---- | ---- | ----
+`interval` | Integer | Interval of the time serie | `86400` (1 day) | `3600`
 
 ##### Response
 
@@ -205,11 +205,11 @@ $ ./analytics
 
 You can also provide the following parameters :
 
-| Parameter | Usage | Type | Default Value |
-| -- | -- | -- | -- |
-| `-port, --p` | Port to listen on | String | `"7070"` |
-| `-directory, -d` | Database directory | String | `"./dbs"` |
-| `-connections, -c` | Max number of alive shards connections | Number | `10` |
+Parameter | Usage | Type | Default Value
+---- | ---- | ---- | ----
+`-port, --p` | Port to listen on | String | `"7070"`
+`-directory, -d` | Database directory | String | `"./dbs"`
+`-connections, -c` | Max number of alive shards connections | Number | `10`
 
 
 ## Using GeoIp
