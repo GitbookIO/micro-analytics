@@ -5,6 +5,7 @@ import (
     "log"
     "net/http"
     "net/url"
+    "strconv"
     "time"
 
     "github.com/gorilla/mux"
@@ -35,17 +36,85 @@ func NewRouter(mainDir string, maxDBs int) http.Handler {
     })
 
     /////
+    // Query a DB over time
+    /////
+    r.Path("/{dbName}/time").
+        Methods("GET").
+        HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+        // Get params from URL
+        vars := mux.Vars(req)
+        dbName := vars["dbName"]
+
+        // Check if DB file exists
+        dbExists, err := dbManager.DBExists(dbName)
+        if err != nil {
+            renderError(w, &errors.InternalError)
+            return
+        }
+
+        // DB doesn't exist
+        if !dbExists {
+            renderError(w, &errors.InvalidDatabaseName)
+            return
+        }
+
+        // Parse request query
+        if err := req.ParseForm(); err != nil {
+            renderError(w, err)
+            return
+        }
+
+        // Get DB from manager
+        db, err := dbManager.GetDB(dbName)
+        if err != nil {
+            renderError(w, &errors.InternalError)
+            return
+        }
+
+        // Get timeRange if provided
+        startTime := req.Form.Get("start")
+        endTime := req.Form.Get("end")
+        intervalStr := req.Form.Get("interval")
+
+        // Convert startTime and endTime to a TimeRange
+        timeRange, err := database.NewTimeRange(startTime, endTime)
+        if err != nil {
+            log.Printf("Error creating TimeRange %v\n", err)
+            renderError(w, &errors.InvalidTimeFormat)
+        }
+
+        // Cast interval to an integer
+        // Defaults to 1 day
+        interval := 24*60*60
+        if len(intervalStr) > 0 {
+            interval, err = strconv.Atoi(intervalStr)
+            if err != nil {
+                log.Printf("Error casting interval to an int %v\n", err)
+                renderError(w, &errors.InvalidInterval)
+            }
+        }
+
+        // Return query result
+        analytics, err := db.OverTimeUniq(interval, timeRange)
+        if err != nil {
+            renderError(w, &errors.InternalError)
+            return
+        }
+        render(w, analytics, nil)
+    })
+
+    /////
     // Query a DB by property
     /////
     r.Path("/{dbName}/{property}").
         Methods("GET").
         HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-        // Map of allowed requests
-        allowedProperties := map[string]bool{
-            "countries": true,
-            "platforms": true,
-            "domains": true,
-            "types":true,
+        // Map allowed requests w/ columns names in DB schema
+        allowedProperties := map[string]string{
+            "countries":    "countryCode",
+            "platforms":    "platform",
+            "domains":      "refererDomain",
+            "types":        "type",
         }
         // Get params from URL
         vars := mux.Vars(req)
@@ -53,7 +122,8 @@ func NewRouter(mainDir string, maxDBs int) http.Handler {
         property := vars["property"]
 
         // Check that property is allowed to be queried
-        if _, ok := allowedProperties[property]; !ok {
+        property, ok := allowedProperties[property]
+        if !ok {
             renderError(w, &errors.InvalidProperty)
             return
         }
@@ -77,13 +147,29 @@ func NewRouter(mainDir string, maxDBs int) http.Handler {
             return
         }
 
-        // Return query result
+        // Get DB from manager
         db, err := dbManager.GetDB(dbName)
         if err != nil {
             renderError(w, &errors.InternalError)
             return
         }
-        analytics := db.Query()
+
+        // Get timeRange if provided
+        startTime := req.Form.Get("start")
+        endTime := req.Form.Get("end")
+
+        timeRange, err := database.NewTimeRange(startTime, endTime)
+        if err != nil {
+            log.Printf("Error creating TimeRange %v\n", err)
+            renderError(w, &errors.InvalidTimeFormat)
+        }
+
+        // Return query result
+        analytics, err := db.GroupByUniq(property, timeRange)
+        if err != nil {
+            renderError(w, &errors.InternalError)
+            return
+        }
         render(w, analytics, nil)
     })
 
@@ -117,13 +203,19 @@ func NewRouter(mainDir string, maxDBs int) http.Handler {
             return
         }
 
-        // Return query result
+        // Get DB from manager
         db, err := dbManager.GetDB(dbName)
         if err != nil {
             renderError(w, &errors.InternalError)
             return
         }
-        analytics := db.Query()
+
+        // Return query result
+        analytics, err := db.Query()
+        if err != nil {
+            renderError(w, &errors.InternalError)
+            return
+        }
         render(w, analytics, nil)
     })
 
@@ -161,6 +253,8 @@ func NewRouter(mainDir string, maxDBs int) http.Handler {
         if len(postData.Time) > 0 {
             analytic.Time, err = time.Parse(time.RFC3339, postData.Time)
         }
+
+        log.Printf("Time : %v\n", analytic.Time.Unix())
 
         // Get referer from headers
         refererHeader := postData.Headers["referer"]
