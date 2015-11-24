@@ -18,6 +18,12 @@ var InvalidDatabaseName = RequestError{
     statusCode: 400,
 }
 
+var InvalidInterval = RequestError{
+    Code:       "InvalidInterval",
+    Message:    "Invalid interval format in request query. Please use specify a number in seconds and retry.",
+    statusCode: 405,
+}
+
 var InvalidJSON = RequestError{
     Code:       "InvalidJSON",
     Message:    "Invalid JSON in request body. Please check and retry.",
@@ -27,5 +33,11 @@ var InvalidJSON = RequestError{
 var InvalidProperty = RequestError{
     Code:       "InvalidProperty",
     Message:    "Invalid request property. Please check and retry.",
+    statusCode: 405,
+}
+
+var InvalidTimeFormat = RequestError{
+    Code:       "InvalidTimeFormat",
+    Message:    "Invalid time format in request query. Please use RFC3339 time and retry.",
     statusCode: 405,
 }
