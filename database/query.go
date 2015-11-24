@@ -79,7 +79,7 @@ func (db *Database) GroupBy(property string, timeRange *TimeRange) (*AggregateLi
     list := AggregateList{}
     for rows.Next() {
         aggregate := Aggregate{}
-        rows.Scan(&aggregate.Id, &aggregate.Count)
+        rows.Scan(&aggregate.Id, &aggregate.Total)
 
         // For countries, get fullname as Label
         if property == "countryCode" {
@@ -87,14 +87,6 @@ func (db *Database) GroupBy(property string, timeRange *TimeRange) (*AggregateLi
         } else {
             aggregate.Label = aggregate.Id
         }
-
-        // Get unique count for property
-        unique, err := db.CountUniqueWhere(property, aggregate.Id, timeRange)
-        if err != nil {
-            log.Printf("[DBQueryByProp] Error %v getting unique COUNT for %s with DB %s", err, property, db.Name)
-            unique = 0
-        }
-        aggregate.Unique = unique
 
         list.List = append(list.List, aggregate)
     }
@@ -171,7 +163,7 @@ func (db *Database) GroupByUniq(property string, timeRange *TimeRange) (*Aggrega
     list := AggregateList{}
     for rows.Next() {
         aggregate := Aggregate{}
-        rows.Scan(&aggregate.Id, &aggregate.Count, &aggregate.Unique)
+        rows.Scan(&aggregate.Id, &aggregate.Total, &aggregate.Unique)
 
         // For countries, get fullname as Label
         if property == "countryCode" {

@@ -3,7 +3,7 @@ package database
 type Aggregate struct {
     Id      string  `json:"id"`
     Label   string  `json:"label"`
-    Count   int     `json:"count"`
+    Total   int     `json:"total"`
     Unique  int     `json:"unique"`
 }
 
