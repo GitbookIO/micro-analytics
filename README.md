@@ -1,4 +1,4 @@
-# Shardalytics
+# µAnalytics
 
 A micro multi-website analytics database service designed to be fast and robust, built with Go and SQLite.
 
@@ -9,17 +9,17 @@ Analytics databases tend to grow fast and exponentially.
 Requesting data for one specific website from a single database thus become very slow over time.
 But analytics data are highly decoupled between two websites.
 
-The idea behind **Shardalytics** is to shard your analytics data on a key, which is usually a website name.
+The idea behind **µAnalytics** is to shard your analytics data on a key, which is usually a website name.
 Each shard thus only contains a specific website data, allowing faster response times and easy horizontal scaling.
 
-To handle requests even faster, **Shardalytics** automatically manages a pool of connections to multiple shards at a time.
+To handle requests even faster, **µAnalytics** automatically manages a pool of connections to multiple shards at a time.
 By default, the service keeps 10 connections alive.
 But you can easily increase/decrease the max number of alive shards with the `--conections` flag when launching the app.
 
 
 ## Analytics schema
 
-All shards of the **Shardalytics** database share the same TABLE schema :
+All shards of the **µAnalytics** database share the same TABLE schema :
 ```SQL
 CREATE TABLE visits (
     time            INTEGER,
