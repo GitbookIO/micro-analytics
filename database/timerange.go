@@ -23,17 +23,27 @@ func NewTimeRange(start string, end string) (*TimeRange, error) {
     var endTime     time.Time
 
     if len(start) > 0 {
+        // Try to parse as RFC3339
         startTime, err := time.Parse(time.RFC3339, start)
         if err != nil {
-            return nil, err
+            // Try to parse as RFC1123
+            startTime, err = time.Parse(time.RFC1123, start)
+            if err != nil {
+                return nil, err
+            }
         }
         timeRange.Start = startTime
     }
 
     if len(end) > 0 {
+        // Try to parse as RFC3339
         endTime, err := time.Parse(time.RFC3339, end)
         if err != nil {
-            return nil, err
+            // Try to parse as RFC1123
+            endTime, err = time.Parse(time.RFC1123, end)
+            if err != nil {
+                return nil, err
+            }
         }
         timeRange.End = endTime
     }
