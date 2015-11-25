@@ -204,6 +204,12 @@ The `time` parameter is optional and is set to the date of your POST request by 
 Passing the HTTP headers in the POST body allows the service to extract the `refererDomain` and `platform` values.
 The `countryCode` will be deduced from the passed `ip` parameter using [Maxmind's GeoLite2 database](http://dev.maxmind.com/geoip/geoip2/geolite2/).
 
+### DELETE requests
+
+#### DELETE `/:website`
+
+Fully delete a shard from the file system.
+
 
 ## Application's parameters
 
