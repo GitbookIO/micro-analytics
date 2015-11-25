@@ -47,7 +47,9 @@ Name | Type | Description | Default | Example
 `start` | Date | Start date to query a range | none | `"2015-11-20T12:00:00.000Z"`
 `end` | Date | End date to query a range | none | `"2015-11-21T12:00:00.000Z"`
 
-The dates can be passed either in ISO (RFC3339) `"2015-11-20T12:00:00.000Z"` or UTC (RFC1123) `'Fri, 20 Nov 2015 12:00:00 GMT'` format.
+The dates can be passed either as :
+ - ISO (RFC3339) `"2015-11-20T12:00:00.000Z"`
+ - UTC (RFC1123) `"Fri, 20 Nov 2015 12:00:00 GMT"`
 
 
 ##### Common Response Values
