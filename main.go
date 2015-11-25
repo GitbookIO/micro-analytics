@@ -15,8 +15,8 @@ import (
 func main() {
     // App meta-data
     app := cli.NewApp()
-    app.Version = "0.0.1"
-    app.Name = "analytics"
+    app.Version = "0.9.0"
+    app.Name = "shardalytics"
     app.Author = "Johan Preynat"
     app.Email = "johan.preynat@gmail.com"
     app.Usage = "Fast sharded analytics database"
