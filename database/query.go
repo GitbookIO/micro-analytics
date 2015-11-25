@@ -10,12 +10,29 @@ import (
 )
 
 // Wrapper for querying a Database struct
-func (db *Database) Query() ([]Analytic, error) {
+func (db *Database) Query(timeRange *TimeRange) (*Analytics, error) {
     // Query
-    query, _, err := sq.
+    queryBuilder := sq.
         Select("time", "event", "path", "ip", "platform", "refererDomain", "countryCode").
-        From("visits").
-        ToSql()
+        From("visits")
+
+    // Add time constraints if timeRange provided
+    if timeRange != nil {
+        if !timeRange.Start.Equal(time.Time{}) {
+            timeQuery := fmt.Sprintf("time > %d", timeRange.Start.Unix())
+            queryBuilder = queryBuilder.Where(timeQuery)
+        }
+        if !timeRange.End.Equal(time.Time{}) {
+            timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
+            queryBuilder = queryBuilder.Where(timeQuery)
+        }
+    }
+
+    query, _, err := queryBuilder.ToSql()
+    if err != nil {
+        log.Printf("[DBQueryByProp] Error %v building query for DB %s", err, db.Name)
+        return nil, err
+    }
 
     // Exec query
     rows, err := db.Conn.Query(query)
@@ -24,21 +41,26 @@ func (db *Database) Query() ([]Analytic, error) {
         return nil, err
     }
     defer rows.Close()
+    log.Printf("Query:\n%s\n", query)
 
-    analytics := []Analytic{}
+    analytics := Analytics{}
     for rows.Next() {
         analytic := Analytic{}
-        rows.Scan(&analytic.Time,
+        var analyticTime int64
+        rows.Scan(&analyticTime,
             &analytic.Event,
             &analytic.Path,
             &analytic.Ip,
             &analytic.Platform,
             &analytic.RefererDomain,
             &analytic.CountryCode)
-        analytics = append(analytics, analytic)
+
+        analytic.Time = time.Unix(analyticTime, 0)
+        log.Printf("Analytic :\n%#v\n", analytic)
+        analytics.List = append(analytics.List, analytic)
     }
 
-    return analytics, nil
+    return &analytics, nil
 }
 
 // Wrapper for querying a Database struct grouped by a property

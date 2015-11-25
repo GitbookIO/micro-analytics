@@ -61,13 +61,6 @@ func NewRouter(dbManager *database.DBManager) http.Handler {
             return
         }
 
-        // Get DB from manager
-        db, err := dbManager.GetDB(dbName)
-        if err != nil {
-            renderError(w, &errors.InternalError)
-            return
-        }
-
         // Get timeRange if provided
         startTime := req.Form.Get("start")
         endTime := req.Form.Get("end")
@@ -91,6 +84,13 @@ func NewRouter(dbManager *database.DBManager) http.Handler {
                 renderError(w, &errors.InvalidInterval)
                 return
             }
+        }
+
+        // Get DB from manager
+        db, err := dbManager.GetDB(dbName)
+        if err != nil {
+            renderError(w, &errors.InternalError)
+            return
         }
 
         // Return query result
@@ -146,13 +146,6 @@ func NewRouter(dbManager *database.DBManager) http.Handler {
             return
         }
 
-        // Get DB from manager
-        db, err := dbManager.GetDB(dbName)
-        if err != nil {
-            renderError(w, &errors.InternalError)
-            return
-        }
-
         // Get timeRange if provided
         startTime := req.Form.Get("start")
         endTime := req.Form.Get("end")
@@ -161,6 +154,13 @@ func NewRouter(dbManager *database.DBManager) http.Handler {
         if err != nil {
             log.Printf("Error creating TimeRange %v\n", err)
             renderError(w, &errors.InvalidTimeFormat)
+            return
+        }
+
+        // Get DB from manager
+        db, err := dbManager.GetDB(dbName)
+        if err != nil {
+            renderError(w, &errors.InternalError)
             return
         }
 
@@ -203,6 +203,23 @@ func NewRouter(dbManager *database.DBManager) http.Handler {
             return
         }
 
+        // Parse request query
+        if err := req.ParseForm(); err != nil {
+            renderError(w, err)
+            return
+        }
+
+        // Get timeRange if provided
+        startTime := req.Form.Get("start")
+        endTime := req.Form.Get("end")
+
+        timeRange, err := database.NewTimeRange(startTime, endTime)
+        if err != nil {
+            log.Printf("Error creating TimeRange %v\n", err)
+            renderError(w, &errors.InvalidTimeFormat)
+            return
+        }
+
         // Get DB from manager
         db, err := dbManager.GetDB(dbName)
         if err != nil {
@@ -211,7 +228,7 @@ func NewRouter(dbManager *database.DBManager) http.Handler {
         }
 
         // Return query result
-        analytics, err := db.Query()
+        analytics, err := db.Query(timeRange)
         if err != nil {
             renderError(w, &errors.InternalError)
             return

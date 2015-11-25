@@ -13,3 +13,7 @@ type Analytic struct {
     RefererDomain   string      `json:"refererDomain"`
     CountryCode     string      `json:"countryCode"`
 }
+
+type Analytics struct {
+    List    []Analytic  `json:"list"`
+}

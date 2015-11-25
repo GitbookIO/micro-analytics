@@ -52,15 +52,37 @@ The dates can be passed either as :
  - UTC (RFC1123) `"Fri, 20 Nov 2015 12:00:00 GMT"`
 
 
-##### Common Response Values
+##### Common Aggregation Response Values
 
-Every response to a GET request will contain the two following values :
+Except for `GET /:website`, every response to a GET request will contain the two following values :
 
 Name | Type | Description
 ---- | ---- | ----
 `total` | Integer | Total number of visits
 `unique` | Integer | Total number of unique visitors based on `ip`
 
+#### GET `/:website`
+
+Returns the full analytics for a website.
+
+##### Response
+
+```JavaScript
+{
+    "list": [
+        {
+            "time": "2015-11-25T16:00:00+01:00",
+            "event": "download",
+            "path": "/somewhere",
+            "ip": "127.0.0.1",
+            "platform": "Windows",
+            "refererDomain": "gitbook.com",
+            "countryCode": "fr"
+        },
+    ...
+    ]
+}
+```
 
 #### GET `/:website/countries`
 
