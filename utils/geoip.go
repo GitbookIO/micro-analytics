@@ -3,6 +3,7 @@ package utils
 import (
     "log"
     "net"
+    "strings"
 
     "github.com/oschwald/maxminddb-golang"
     "github.com/GitbookIO/geo-utils-go"
@@ -30,7 +31,7 @@ func GeoIpLookup(ipStr string) string {
         log.Fatal(err)
     }
 
-    return result.Country.ISOCode
+    return strings.ToLower(result.Country.ISOCode)
 }
 
 // Return a country fullname from countryCode
