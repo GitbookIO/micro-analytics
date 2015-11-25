@@ -15,10 +15,7 @@ import (
     "github.com/GitbookIO/analytics/web/errors"
 )
 
-func NewRouter(mainDir string, maxDBs int) http.Handler {
-    // Create the app DB manager
-    dbManager := database.NewManager(mainDir, maxDBs)
-
+func NewRouter(dbManager *database.DBManager) http.Handler {
     // Create the app router
     r := mux.NewRouter()
 
