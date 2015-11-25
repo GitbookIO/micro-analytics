@@ -19,7 +19,7 @@ But you can easily increase/decrease the max number of alive shards with the `--
 
 ## Analytics schema
 
-All shards of the µAnalytics database share the same TABLE schema :
+All shards of the **Shardalytics** database share the same TABLE schema :
 ```SQL
 CREATE TABLE visits (
     time            INTEGER,
