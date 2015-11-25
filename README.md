@@ -1,6 +1,6 @@
-# Analytics
+# Shardalytics
 
-A micro analytics oriented database service designed to be fast and robust, built with Go and SQLite.
+A micro multi-website analytics database service designed to be fast and robust, built with Go and SQLite.
 
 
 ## Principle
@@ -9,22 +9,26 @@ Analytics databases tend to grow fast and exponentially.
 Requesting data for one specific website from a single database thus become very slow over time.
 But analytics data are highly decoupled between two websites.
 
-The idea behind `Analytics` is to shard your analytics data on a key, which is usually a website name.
+The idea behind **Shardalytics** is to shard your analytics data on a key, which is usually a website name.
 Each shard thus only contains a specific website data, allowing faster response times and easy horizontal scaling.
+
+To handle requests even faster, **Shardalytics** automatically manages a pool of connections to multiple shards at a time.
+By default, the service keeps 10 connections alive.
+But you can easily increase/decrease the max number of alive shards with the `--conections` flag when launching the app.
 
 
 ## Analytics schema
 
-All shards of the Analytics database share the same TABLE schema :
+All shards of the µAnalytics database share the same TABLE schema :
 ```SQL
 CREATE TABLE visits (
-    time            TIMESTAMP,
-    type            VARCHAR,
-    path            VARCHAR,
-    ip              VARCHAR,
-    platform        VARCHAR,
-    refererDomain   VARCHAR,
-    countryCode     VARCHAR
+    time            INTEGER,
+    event           TEXT,
+    path            TEXT,
+    ip              TEXT,
+    platform        TEXT,
+    refererDomain   TEXT,
+    countryCode     TEXT
 )
 ```
 
@@ -40,10 +44,15 @@ Every following GET request thus takes the two following optional query string p
 
 Name | Type | Description | Default | Example
 ---- | ---- | ---- | ---- | ----
-`start` | Date | Start date to query a range | none | `"2015-11-24T12:00:00.000Z"`
-`end` | Date | End date to query a range | none | `"2015-11-24T20:00:00.000Z"`
+`start` | Date | Start date to query a range | none | `"2015-11-20T12:00:00.000Z"`
+`end` | Date | End date to query a range | none | `"2015-11-21T12:00:00.000Z"`
+
+The dates can be passed either in ISO (RFC3339) `"2015-11-20T12:00:00.000Z"` or UTC (RFC1123) `'Fri, 20 Nov 2015 12:00:00 GMT'` format.
+
 
 ##### Common Response Values
+
+Every response to a GET request will contain the two following values :
 
 Name | Type | Description
 ---- | ---- | ----
