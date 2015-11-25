@@ -13,13 +13,13 @@ func OpenAndInitialize(dbPath string) (*sql.DB, error) {
     // DB schema
     createTable := `
     CREATE TABLE visits (
-        time            TIMESTAMP,
-        type            VARCHAR,
-        path            VARCHAR,
-        ip              VARCHAR,
-        platform        VARCHAR,
-        refererDomain   VARCHAR,
-        countryCode     VARCHAR
+        time            INTEGER,
+        event           TEXT,
+        path            TEXT,
+        ip              TEXT,
+        platform        TEXT,
+        refererDomain   TEXT,
+        countryCode     TEXT
     )`
 
     // DB index

@@ -6,7 +6,7 @@ import (
 
 type Analytic struct {
     Time            time.Time   `json:"time"`
-    Type            string      `json:"type"`
+    Event           string      `json:"event"`
     Path            string      `json:"path"`
     Ip              string      `json:"ip"`
     Platform        string      `json:"platform"`

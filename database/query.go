@@ -12,9 +12,8 @@ import (
 // Wrapper for querying a Database struct
 func (db *Database) Query() ([]Analytic, error) {
     // Query
-    // query := `SELECT time, type, path, ip, platform, refererDomain, countryCode FROM visits`
     query, _, err := sq.
-        Select("time", "type", "path", "ip", "platform", "refererDomain", "countryCode").
+        Select("time", "event", "path", "ip", "platform", "refererDomain", "countryCode").
         From("visits").
         ToSql()
 
@@ -30,7 +29,7 @@ func (db *Database) Query() ([]Analytic, error) {
     for rows.Next() {
         analytic := Analytic{}
         rows.Scan(&analytic.Time,
-            &analytic.Type,
+            &analytic.Event,
             &analytic.Path,
             &analytic.Ip,
             &analytic.Platform,

@@ -11,9 +11,9 @@ import (
 func (db *Database) Insert(analytic Analytic) error {
     insertQuery := sq.
         Insert("visits").
-        Columns("time", "type", "path", "ip", "platform", "refererDomain", "countryCode").
+        Columns("time", "event", "path", "ip", "platform", "refererDomain", "countryCode").
         Values(analytic.Time.Unix(),
-            analytic.Type,
+            analytic.Event,
             analytic.Path,
             analytic.Ip,
             analytic.Platform,

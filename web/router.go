@@ -81,6 +81,7 @@ func NewRouter(mainDir string, maxDBs int) http.Handler {
         if err != nil {
             log.Printf("Error creating TimeRange %v\n", err)
             renderError(w, &errors.InvalidTimeFormat)
+            return
         }
 
         // Cast interval to an integer
@@ -91,6 +92,7 @@ func NewRouter(mainDir string, maxDBs int) http.Handler {
             if err != nil {
                 log.Printf("Error casting interval to an int %v\n", err)
                 renderError(w, &errors.InvalidInterval)
+                return
             }
         }
 
@@ -114,7 +116,7 @@ func NewRouter(mainDir string, maxDBs int) http.Handler {
             "countries":    "countryCode",
             "platforms":    "platform",
             "domains":      "refererDomain",
-            "types":        "type",
+            "events":       "event",
         }
         // Get params from URL
         vars := mux.Vars(req)
@@ -162,6 +164,7 @@ func NewRouter(mainDir string, maxDBs int) http.Handler {
         if err != nil {
             log.Printf("Error creating TimeRange %v\n", err)
             renderError(w, &errors.InvalidTimeFormat)
+            return
         }
 
         // Return query result
@@ -244,7 +247,7 @@ func NewRouter(mainDir string, maxDBs int) http.Handler {
         // Create Analytic to inject in DB
         analytic := database.Analytic{
             Time:   time.Now(),
-            Type:   postData.Type,
+            Event:  postData.Event,
             Path:   postData.Path,
             Ip:     postData.Ip,
         }
@@ -253,8 +256,6 @@ func NewRouter(mainDir string, maxDBs int) http.Handler {
         if len(postData.Time) > 0 {
             analytic.Time, err = time.Parse(time.RFC3339, postData.Time)
         }
-
-        log.Printf("Time : %v\n", analytic.Time.Unix())
 
         // Get referer from headers
         refererHeader := postData.Headers["referer"]
