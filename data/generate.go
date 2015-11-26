@@ -1,0 +1,3 @@
+package geolite2db
+
+//go:generate go-bindata -o geolite2db.go -ignore=\*.go$ -ignore=\.DS_Store -pkg=geolite2db ./...

@@ -281,7 +281,7 @@ func NewRouter(dbManager *database.DBManager) http.Handler {
         analytic.Platform = utils.Platform(postData.Headers["user-agent"])
 
         // Get countryCode from GeoIp
-        analytic.CountryCode = utils.GeoIpLookup(postData.Ip)
+        analytic.CountryCode, err = utils.GeoIpLookup(postData.Ip)
 
         // Insert data if everything's OK
         db, err := dbManager.GetDB(dbName)
