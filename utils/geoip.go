@@ -17,25 +17,28 @@ type lookupResult struct {
     } `maxminddb:"country"`
 }
 
-// Return ISOCode for an IP
-func GeoIpLookup(ipStr string) (string, error) {
+func GetGeoLite2Reader() (*maxminddb.Reader, error) {
     data, err := geolite2db.Asset("GeoLite2-Country.mmdb")
     if err != nil {
         log.Printf("[GeoIP] Unable to open GeoLite2-Country asset file. Error %v\n", err)
-        return "", err
+        return nil, err
     }
 
     db, err := maxminddb.FromBytes(data)
     if err != nil {
         log.Printf("[GeoIP] Unable to open GeoLite2-Country database. Error %v\n", err)
-        return "", err
+        return nil, err
     }
-    defer db.Close()
 
+    return db, nil
+}
+
+// Return ISOCode for an IP
+func GeoIpLookup(geolite2 *maxminddb.Reader, ipStr string) (string, error) {
     ip := net.ParseIP(ipStr)
 
     result := lookupResult{}
-    err = db.Lookup(ip, &result)
+    err := geolite2.Lookup(ip, &result)
     if err != nil {
         log.Printf("[GeoIP] Unable to lookup for IP %s\n", ipStr)
         return "", err

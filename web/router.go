@@ -9,13 +9,14 @@ import (
     "time"
 
     "github.com/gorilla/mux"
+    "github.com/oschwald/maxminddb-golang"
 
     "github.com/GitbookIO/analytics/database"
     "github.com/GitbookIO/analytics/utils"
     "github.com/GitbookIO/analytics/web/errors"
 )
 
-func NewRouter(dbManager *database.DBManager) http.Handler {
+func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.Handler {
     // Create the app router
     r := mux.NewRouter()
 
@@ -69,7 +70,7 @@ func NewRouter(dbManager *database.DBManager) http.Handler {
         // Convert startTime and endTime to a TimeRange
         timeRange, err := database.NewTimeRange(startTime, endTime)
         if err != nil {
-            log.Printf("Error creating TimeRange %v\n", err)
+            log.Printf("[Router] Error creating TimeRange %v\n", err)
             renderError(w, &errors.InvalidTimeFormat)
             return
         }
@@ -80,7 +81,7 @@ func NewRouter(dbManager *database.DBManager) http.Handler {
         if len(intervalStr) > 0 {
             interval, err = strconv.Atoi(intervalStr)
             if err != nil {
-                log.Printf("Error casting interval to an int %v\n", err)
+                log.Printf("[Router] Error casting interval to an int %v\n", err)
                 renderError(w, &errors.InvalidInterval)
                 return
             }
@@ -152,7 +153,7 @@ func NewRouter(dbManager *database.DBManager) http.Handler {
 
         timeRange, err := database.NewTimeRange(startTime, endTime)
         if err != nil {
-            log.Printf("Error creating TimeRange %v\n", err)
+            log.Printf("[Router] Error creating TimeRange %v\n", err)
             renderError(w, &errors.InvalidTimeFormat)
             return
         }
@@ -215,7 +216,7 @@ func NewRouter(dbManager *database.DBManager) http.Handler {
 
         timeRange, err := database.NewTimeRange(startTime, endTime)
         if err != nil {
-            log.Printf("Error creating TimeRange %v\n", err)
+            log.Printf("[Router] Error creating TimeRange %v\n", err)
             renderError(w, &errors.InvalidTimeFormat)
             return
         }
@@ -281,7 +282,7 @@ func NewRouter(dbManager *database.DBManager) http.Handler {
         analytic.Platform = utils.Platform(postData.Headers["user-agent"])
 
         // Get countryCode from GeoIp
-        analytic.CountryCode, err = utils.GeoIpLookup(postData.Ip)
+        analytic.CountryCode, err = utils.GeoIpLookup(geolite2, postData.Ip)
 
         // Insert data if everything's OK
         db, err := dbManager.GetDB(dbName)

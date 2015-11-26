@@ -64,6 +64,13 @@ func main() {
         // Initiate DBManager
         dbManager := database.NewManager(mainDirectory, maxDBs)
 
+        // Initiate Geolite2 DB Reader
+        geolite2, err := utils.GetGeoLite2Reader()
+        if err != nil {
+            log.Printf("[Main] Error getting a geolite2Reader. Error %v\n", err)
+            log.Println("[Main] Running without Geolite2")
+        }
+
         // Handle exit by softly closing DB connections
         c := make(chan os.Signal, 1)
         signal.Notify(c, os.Interrupt)
@@ -72,16 +79,20 @@ func main() {
             <-c
             log.Println("[Main] Purging DB manager...")
             dbManager.Purge()
-            log.Println("[Main] Finished purging DB manager")
+            log.Println("[Main] DB manager has been purged successfully")
+            log.Println("[Main] Closing Geolite2 connection...")
+            geolite2.Close()
+            log.Println("[Main] Geolite2 is now closed")
             log.Println("[Main] Goodbye!")
             os.Exit(1)
         }()
 
         // Setup server
         opts := ServerOpts{
-            Port:       normalizePort(ctx.String("port")),
-            Version:    app.Version,
-            DBManager:  dbManager,
+            Port:           normalizePort(ctx.String("port")),
+            Version:        app.Version,
+            DBManager:      dbManager,
+            Geolite2Reader: geolite2,
         }
 
         log.Printf("[Main] Launching server with: %#v\n", opts)
