@@ -41,7 +41,6 @@ func (db *Database) Query(timeRange *TimeRange) (*Analytics, error) {
         return nil, err
     }
     defer rows.Close()
-    log.Printf("Query:\n%s\n", query)
 
     analytics := Analytics{}
     for rows.Next() {
@@ -56,7 +55,6 @@ func (db *Database) Query(timeRange *TimeRange) (*Analytics, error) {
             &analytic.CountryCode)
 
         analytic.Time = time.Unix(analyticTime, 0)
-        log.Printf("Analytic :\n%#v\n", analytic)
         analytics.List = append(analytics.List, analytic)
     }
 

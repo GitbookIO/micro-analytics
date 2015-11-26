@@ -137,6 +137,10 @@ func (manager *DBManager) DBExists(dbName string) (bool, error) {
 
 // Fully delete a DB on disk system
 func (manager *DBManager) DeleteDB(dbName string) error {
+    // Unregister from manager
+    manager.Unregister(dbName)
+
+    // Then delete
     dbDir := path.Join(manager.directory, dbName)
     return os.RemoveAll(dbDir)
 }

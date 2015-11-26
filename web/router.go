@@ -309,8 +309,21 @@ func NewRouter(dbManager *database.DBManager) http.Handler {
         vars := mux.Vars(req)
         dbName := vars["dbName"]
 
+        // Check if DB file exists
+        dbExists, err := dbManager.DBExists(dbName)
+        if err != nil {
+            renderError(w, &errors.InternalError)
+            return
+        }
+
+        // DB doesn't exist
+        if !dbExists {
+            renderError(w, &errors.InvalidDatabaseName)
+            return
+        }
+
         // Delete full DB directory
-        err := dbManager.DeleteDB(dbName)
+        err = dbManager.DeleteDB(dbName)
         render(w, nil, err)
     })
 
