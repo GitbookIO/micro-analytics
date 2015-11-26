@@ -51,11 +51,14 @@ func (manager *DBManager) Register(db *Database) {
 
 // Fully remove a DB from manager
 func (manager *DBManager) Unregister(dbName string) {
-    // Close DB
-    manager.DBs[dbName].Conn.Close()
+    // Test that DB was registered
+    if _, ok := manager.DBs[dbName]; ok {
+        // Close DB
+        manager.DBs[dbName].Conn.Close()
 
-    // Unregister DB
-    delete(manager.DBs, dbName)
+        // Unregister DB
+        delete(manager.DBs, dbName)
+    }
 }
 
 // Detach the longest opened DB from manager
