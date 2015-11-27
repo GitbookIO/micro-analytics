@@ -19,7 +19,7 @@ func (db *Database) Query(timeRange *TimeRange) (*Analytics, error) {
     // Add time constraints if timeRange provided
     if timeRange != nil {
         if !timeRange.Start.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time > %d", timeRange.Start.Unix())
+            timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
             queryBuilder = queryBuilder.Where(timeQuery)
         }
         if !timeRange.End.Equal(time.Time{}) {
@@ -71,7 +71,7 @@ func (db *Database) GroupBy(property string, timeRange *TimeRange) (*AggregateLi
     // Add time constraints if timeRange provided
     if timeRange != nil {
         if !timeRange.Start.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time > %d", timeRange.Start.Unix())
+            timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
             queryBuilder = queryBuilder.Where(timeQuery)
         }
         if !timeRange.End.Equal(time.Time{}) {
@@ -123,7 +123,7 @@ func (db *Database) GroupByUniq(property string, timeRange *TimeRange) (*Aggrega
     // Add time constraints if timeRange provided
     if timeRange != nil {
         if !timeRange.Start.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time > %d", timeRange.Start.Unix())
+            timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
             subqueryBuilder = subqueryBuilder.Where(timeQuery)
         }
         if !timeRange.End.Equal(time.Time{}) {
@@ -154,7 +154,7 @@ func (db *Database) GroupByUniq(property string, timeRange *TimeRange) (*Aggrega
     // Add time constraints if timeRange provided
     if timeRange != nil {
         if !timeRange.Start.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time > %d", timeRange.Start.Unix())
+            timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
             queryBuilder = queryBuilder.Where(timeQuery)
         }
         if !timeRange.End.Equal(time.Time{}) {
@@ -207,7 +207,7 @@ func (db *Database) OverTimeUniq(interval int, timeRange *TimeRange) (*Intervals
     // Add time constraints if timeRange provided
     if timeRange != nil {
         if !timeRange.Start.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time > %d", timeRange.Start.Unix())
+            timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
             subqueryBuilder = subqueryBuilder.Where(timeQuery)
         }
         if !timeRange.End.Equal(time.Time{}) {
@@ -235,7 +235,7 @@ func (db *Database) OverTimeUniq(interval int, timeRange *TimeRange) (*Intervals
     // Add time constraints if timeRange provided
     if timeRange != nil {
         if !timeRange.Start.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time > %d", timeRange.Start.Unix())
+            timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
             queryBuilder = queryBuilder.Where(timeQuery)
         }
         if !timeRange.End.Equal(time.Time{}) {
@@ -287,7 +287,7 @@ func (db *Database) CountUniqueWhere(property string, value string, timeRange *T
     // Add time constraints if timeRange provided
     if timeRange != nil {
         if !timeRange.Start.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time > %d", timeRange.Start.Unix())
+            timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
             queryBuilder = queryBuilder.Where(timeQuery)
         }
         if !timeRange.End.Equal(time.Time{}) {
@@ -332,7 +332,7 @@ func (db *Database) OverTime(interval int, timeRange *TimeRange) (*Intervals, er
     // Add time constraints if timeRange provided
     if timeRange != nil {
         if !timeRange.Start.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time > %d", timeRange.Start.Unix())
+            timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
             queryBuilder = queryBuilder.Where(timeQuery)
         }
         if !timeRange.End.Equal(time.Time{}) {
