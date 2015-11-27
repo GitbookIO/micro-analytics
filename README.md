@@ -146,9 +146,9 @@ Returns the number of visits per `refererDomain`.
 }
 ```
 
-#### GET `/:website/types`
+#### GET `/:website/events`
 
-Returns the number of visits per `type`.
+Returns the number of visits per `event`.
 
 ##### Response
 
@@ -211,7 +211,7 @@ Insert new data for the specified website.
 ```JavaScript
 {
     "time": "2015-11-24T13:00:00.000Z", // optional
-    "type": "download",
+    "event": "download",
     "ip": "127.0.0.1",
     "path": "/README.md",
     "headers": {
