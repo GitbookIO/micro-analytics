@@ -17,6 +17,29 @@ By default, the service keeps 10 connections alive.
 But you can easily increase/decrease the max number of alive shards with the `--conections` flag when launching the app.
 
 
+## Install
+
+```Shell
+$ go install github.com/GitbookIO/analytics
+```
+
+
+## Service launching
+
+To launch the application, simply run:
+```
+$ ./analytics
+```
+
+The command takes the following optional parameters:
+
+Parameter | Usage | Type | Default Value
+---- | ---- | ---- | ----
+`-port, --p` | Port to listen on | String | `"7070"`
+`-directory, -d` | Database directory | String | `"./dbs"`
+`-connections, -c` | Max number of alive shards connections | Number | `10`
+
+
 ## Analytics schema
 
 All shards of the **µAnalytics** database share the same TABLE schema:
@@ -233,22 +256,6 @@ The `countryCode` will be deduced from the passed `ip` parameter using [Maxmind'
 Fully delete a shard from the file system.
 
 
-## Application's parameters
-
-Running the application is as simple as running:
-```
-$ ./analytics
-```
-
-You can also provide the following parameters:
-
-Parameter | Usage | Type | Default Value
----- | ---- | ---- | ----
-`-port, --p` | Port to listen on | String | `"7070"`
-`-directory, -d` | Database directory | String | `"./dbs"`
-`-connections, -c` | Max number of alive shards connections | Number | `10`
-
-
 ## GeoLite2 data file
 
 The [Maxmind's GeoLite2 DB](http://dev.maxmind.com/geoip/geoip2/geolite2/) is pre-compiled in the source files using [go-bindata](https://github.com/jteeuwen/go-bindata).
@@ -256,6 +263,6 @@ The go file can be found in `/utils/geoip/data/geolite2db.go`.
 
 To refresh `geolite2db.go` from a new `GeoLite2-Country.mmdb` file, go to the `/utils/geoip/data` folder and run:
 
-```Bash
+```Shell
 $ go generate
 ```
