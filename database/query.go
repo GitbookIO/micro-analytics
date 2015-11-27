@@ -6,7 +6,7 @@ import (
     "time"
 
     sq "github.com/Masterminds/squirrel"
-    "github.com/GitbookIO/analytics/utils"
+    "github.com/GitbookIO/analytics/utils/geoip"
 )
 
 // Wrapper for querying a Database struct
@@ -102,7 +102,7 @@ func (db *Database) GroupBy(property string, timeRange *TimeRange) (*AggregateLi
 
         // For countries, get fullname as Label
         if property == "countryCode" {
-            aggregate.Label = utils.GetCountry(aggregate.Id)
+            aggregate.Label = geoip.GetCountry(aggregate.Id)
         } else {
             aggregate.Label = aggregate.Id
         }
@@ -186,7 +186,7 @@ func (db *Database) GroupByUniq(property string, timeRange *TimeRange) (*Aggrega
 
         // For countries, get fullname as Label
         if property == "countryCode" {
-            aggregate.Label = utils.GetCountry(aggregate.Id)
+            aggregate.Label = geoip.GetCountry(aggregate.Id)
         } else {
             aggregate.Label = aggregate.Id
         }

@@ -13,6 +13,7 @@ import (
 
     "github.com/GitbookIO/analytics/database"
     "github.com/GitbookIO/analytics/utils"
+    "github.com/GitbookIO/analytics/utils/geoip"
 )
 
 func main() {
@@ -65,7 +66,7 @@ func main() {
         dbManager := database.NewManager(mainDirectory, maxDBs)
 
         // Initiate Geolite2 DB Reader
-        geolite2, err := utils.GetGeoLite2Reader()
+        geolite2, err := geoip.GetGeoLite2Reader()
         if err != nil {
             log.Printf("[Main] Error getting a geolite2Reader. Error %v\n", err)
             log.Println("[Main] Running without Geolite2")

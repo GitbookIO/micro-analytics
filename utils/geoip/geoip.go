@@ -1,4 +1,4 @@
-package utils
+package geoip
 
 import (
     "log"
@@ -8,7 +8,7 @@ import (
     "github.com/oschwald/maxminddb-golang"
     "github.com/GitbookIO/geo-utils-go"
 
-    "github.com/GitbookIO/analytics/data"
+    "github.com/GitbookIO/analytics/utils/geoip/data"
 )
 
 type lookupResult struct {

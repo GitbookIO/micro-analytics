@@ -13,6 +13,7 @@ import (
 
     "github.com/GitbookIO/analytics/database"
     "github.com/GitbookIO/analytics/utils"
+    "github.com/GitbookIO/analytics/utils/geoip"
     "github.com/GitbookIO/analytics/web/errors"
 )
 
@@ -282,7 +283,7 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
         analytic.Platform = utils.Platform(postData.Headers["user-agent"])
 
         // Get countryCode from GeoIp
-        analytic.CountryCode, err = utils.GeoIpLookup(geolite2, postData.Ip)
+        analytic.CountryCode, err = geoip.GeoIpLookup(geolite2, postData.Ip)
 
         // Insert data if everything's OK
         db, err := dbManager.GetDB(dbName)
