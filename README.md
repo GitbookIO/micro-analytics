@@ -249,16 +249,13 @@ Parameter | Usage | Type | Default Value
 `-connections, -c` | Max number of alive shards connections | Number | `10`
 
 
-## Using GeoIp
+## GeoLite2 data file
 
-To be able to use [Maxmind's GeoLite2 DB](http://dev.maxmind.com/geoip/geoip2/geolite2/), your application should embed the `GeoLite2-Country.mmdb` file in the `data/` folder.
+The [Maxmind's GeoLite2 DB](http://dev.maxmind.com/geoip/geoip2/geolite2/) is pre-compiled in the source files using [go-bindata](https://github.com/jteeuwen/go-bindata).
+The go file can be found in `/utils/geoip/data/geolite2db.go`.
 
-Your application's root folder should look like this :
-```
-bin/
-    .
-    ..
-    analytics
-    data/
-        GeoLite2-Country.mmdb
+If you need to refresh `geolite2db.go` from a new `GeoLite2-Country.mmdb` file, simply go to the `/utils/geoip/data` folder and run :
+
+```Bash
+$ go generate
 ```
