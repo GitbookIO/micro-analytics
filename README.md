@@ -19,7 +19,7 @@ But you can easily increase/decrease the max number of alive shards with the `--
 
 ## Analytics schema
 
-All shards of the **µAnalytics** database share the same TABLE schema :
+All shards of the **µAnalytics** database share the same TABLE schema:
 ```SQL
 CREATE TABLE visits (
     time            INTEGER,
@@ -40,21 +40,21 @@ CREATE TABLE visits (
 ##### Common Parameters
 
 Every query for a specific website can be executed using a time range.
-Every following GET request thus takes the two following optional query string parameters :
+Every following GET request thus takes the two following optional query string parameters:
 
 Name | Type | Description | Default | Example
 ---- | ---- | ---- | ---- | ----
 `start` | Date | Start date to query a range | none | `"2015-11-20T12:00:00.000Z"`
 `end` | Date | End date to query a range | none | `"2015-11-21T12:00:00.000Z"`
 
-The dates can be passed either as :
+The dates can be passed either as:
  - ISO (RFC3339) `"2015-11-20T12:00:00.000Z"`
  - UTC (RFC1123) `"Fri, 20 Nov 2015 12:00:00 GMT"`
 
 
 ##### Common Aggregation Response Values
 
-Except for `GET /:website`, every response to a GET request will contain the two following values :
+Except for `GET /:website`, every response to a GET request will contain the two following values:
 
 Name | Type | Description
 ---- | ---- | ----
@@ -178,7 +178,7 @@ Name | Type | Description | Default | Example
 
 ##### Response
 
-Example with interval set to `3600` :
+Example with interval set to `3600`:
 
 ```JavaScript
 {
@@ -235,12 +235,12 @@ Fully delete a shard from the file system.
 
 ## Application's parameters
 
-Running the application is as simple as running :
+Running the application is as simple as running:
 ```
 $ ./analytics
 ```
 
-You can also provide the following parameters :
+You can also provide the following parameters:
 
 Parameter | Usage | Type | Default Value
 ---- | ---- | ---- | ----
@@ -254,7 +254,7 @@ Parameter | Usage | Type | Default Value
 The [Maxmind's GeoLite2 DB](http://dev.maxmind.com/geoip/geoip2/geolite2/) is pre-compiled in the source files using [go-bindata](https://github.com/jteeuwen/go-bindata).
 The go file can be found in `/utils/geoip/data/geolite2db.go`.
 
-Refreshing `geolite2db.go` from a new `GeoLite2-Country.mmdb` file is as simple as going to the `/utils/geoip/data` folder and run :
+To refresh `geolite2db.go` from a new `GeoLite2-Country.mmdb` file, go to the `/utils/geoip/data` folder and run:
 
 ```Bash
 $ go generate
