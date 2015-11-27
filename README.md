@@ -254,7 +254,7 @@ Parameter | Usage | Type | Default Value
 The [Maxmind's GeoLite2 DB](http://dev.maxmind.com/geoip/geoip2/geolite2/) is pre-compiled in the source files using [go-bindata](https://github.com/jteeuwen/go-bindata).
 The go file can be found in `/utils/geoip/data/geolite2db.go`.
 
-If you need to refresh `geolite2db.go` from a new `GeoLite2-Country.mmdb` file, simply go to the `/utils/geoip/data` folder and run :
+Refreshing `geolite2db.go` from a new `GeoLite2-Country.mmdb` file is as simple as going to the `/utils/geoip/data` folder and run :
 
 ```Bash
 $ go generate
