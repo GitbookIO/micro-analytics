@@ -6,7 +6,7 @@ import (
     "time"
 
     sq "github.com/Masterminds/squirrel"
-    "github.com/GitbookIO/analytics/utils/geoip"
+    "github.com/GitbookIO/micro-analytics/utils/geoip"
 )
 
 // Wrapper for querying a Database struct

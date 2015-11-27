@@ -4,7 +4,7 @@ import (
     "encoding/json"
     "net/http"
 
-    "github.com/GitbookIO/analytics/web/errors"
+    "github.com/GitbookIO/micro-analytics/web/errors"
 )
 
 func render(w http.ResponseWriter, data interface{}, err error) {

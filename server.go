@@ -7,8 +7,8 @@ import (
     "github.com/gorilla/handlers"
     "github.com/oschwald/maxminddb-golang"
 
-    "github.com/GitbookIO/analytics/database"
-    "github.com/GitbookIO/analytics/web"
+    "github.com/GitbookIO/micro-analytics/database"
+    "github.com/GitbookIO/micro-analytics/web"
 )
 
 type ServerOpts struct {

@@ -7,7 +7,7 @@ import (
     "path"
     "time"
 
-    "github.com/GitbookIO/analytics/utils"
+    "github.com/GitbookIO/micro-analytics/utils"
 )
 
 const dbFileName = "analytics.db"

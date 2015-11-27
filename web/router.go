@@ -11,10 +11,10 @@ import (
     "github.com/gorilla/mux"
     "github.com/oschwald/maxminddb-golang"
 
-    "github.com/GitbookIO/analytics/database"
-    "github.com/GitbookIO/analytics/utils"
-    "github.com/GitbookIO/analytics/utils/geoip"
-    "github.com/GitbookIO/analytics/web/errors"
+    "github.com/GitbookIO/micro-analytics/database"
+    "github.com/GitbookIO/micro-analytics/utils"
+    "github.com/GitbookIO/micro-analytics/utils/geoip"
+    "github.com/GitbookIO/micro-analytics/web/errors"
 )
 
 func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.Handler {

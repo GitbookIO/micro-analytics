@@ -8,7 +8,7 @@ import (
     "github.com/oschwald/maxminddb-golang"
     "github.com/GitbookIO/geo-utils-go"
 
-    "github.com/GitbookIO/analytics/utils/geoip/data"
+    "github.com/GitbookIO/micro-analytics/utils/geoip/data"
 )
 
 type lookupResult struct {

@@ -11,9 +11,9 @@ import (
     "github.com/codegangsta/cli"
     "github.com/facebookgo/grace/gracehttp"
 
-    "github.com/GitbookIO/analytics/database"
-    "github.com/GitbookIO/analytics/utils"
-    "github.com/GitbookIO/analytics/utils/geoip"
+    "github.com/GitbookIO/micro-analytics/database"
+    "github.com/GitbookIO/micro-analytics/utils"
+    "github.com/GitbookIO/micro-analytics/utils/geoip"
 )
 
 func main() {

@@ -20,7 +20,7 @@ But you can easily increase/decrease the max number of alive shards with the `--
 ## Install
 
 ```Shell
-$ go install github.com/GitbookIO/analytics
+$ go install github.com/GitbookIO/micro-analytics
 ```
 
 
@@ -28,7 +28,7 @@ $ go install github.com/GitbookIO/analytics
 
 To launch the application, simply run:
 ```
-$ ./analytics
+$ ./micro-analytics
 ```
 
 The command takes the following optional parameters:
