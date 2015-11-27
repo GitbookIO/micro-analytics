@@ -13,8 +13,9 @@ The idea behind **µAnalytics** is to shard your analytics data on a key, which 
 Each shard thus only contains a specific website data, allowing faster response times and easy horizontal scaling.
 
 To handle requests even faster, **µAnalytics** automatically manages a pool of connections to multiple shards at a time.
+
 By default, the service keeps 10 connections alive.
-But you can easily increase/decrease the max number of alive shards with the `--conections` flag when launching the app.
+But you can easily increase/decrease the max number of alive shards with the `--connections` flag when launching the app.
 
 
 ## Install
