@@ -92,6 +92,15 @@ func (manager *DBManager) GetDB(dbName string) (*Database, error) {
         return db, nil
     }
 
+    // Register DB
+    database := Database{
+        Name:       dbName,
+        Conn:       nil,
+        StartTime:  time.Now(),
+    }
+
+    manager.Register(&database)
+
     // Create DB directory if doesn't exist
     dbDir := path.Join(manager.directory, dbName)
     dbExists, err := manager.DBExists(dbName)
@@ -99,28 +108,32 @@ func (manager *DBManager) GetDB(dbName string) (*Database, error) {
         log.Printf("[DBManager] Error %v reaching for DB %s\n", err, dbName)
         return nil, err
     }
+
+    var conn *sql.DB
+    dbPath := path.Join(dbDir, dbFileName)
+
     if !dbExists {
         if err = os.Mkdir(dbDir, os.ModePerm); err != nil {
             log.Printf("[DBManager] Error %v creating directory for DB %s\n", err, dbName)
             return nil, err
         }
+
+        // Open DB connection and returns the full Database
+        conn, err = OpenAndInitialize(dbPath)
+        if err != nil {
+            log.Printf("[DBManager] Error %v opening DB %s", err, dbName)
+            return nil, err
+        }
+    } else {
+        conn, err = Open(dbPath)
+        if err != nil {
+            log.Printf("[DBManager] Error %v opening DB %s", err, dbName)
+            return nil, err
+        }
     }
 
-    // Open DB connection and returns the full Database
-    dbPath := path.Join(dbDir, dbFileName)
-    conn, err := OpenAndInitialize(dbPath)
-    if err != nil {
-        log.Printf("[DBManager] Error %v opening DB %s", err, dbName)
-        return nil, err
-    }
+    database.Conn = conn
 
-    database := Database{
-        Name:       dbName,
-        Conn:       conn,
-        StartTime:  time.Now(),
-    }
-
-    manager.Register(&database)
     return &database, nil
 }
 

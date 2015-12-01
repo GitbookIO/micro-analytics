@@ -6,6 +6,7 @@ import (
     "net/http"
     "net/url"
     "strconv"
+    "strings"
     "time"
 
     "github.com/gorilla/mux"
@@ -95,12 +96,25 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
             return
         }
 
-        // Return query result
-        analytics, err := db.OverTimeUniq(interval, timeRange)
-        if err != nil {
-            renderError(w, &errors.InternalError)
-            return
+        // Check for unique query parameter to call function accordingly
+        var analytics *database.Intervals
+        unique := req.Form.Get("unique")
+
+        if strings.Compare(unique, "true") == 0 {
+            analytics, err = db.OverTimeUniq(interval, timeRange)
+            if err != nil {
+                renderError(w, &errors.InternalError)
+                return
+            }
+        } else {
+            analytics, err = db.OverTime(interval, timeRange)
+            if err != nil {
+                renderError(w, &errors.InternalError)
+                return
+            }
         }
+
+        // Return query result
         render(w, analytics, nil)
     })
 
@@ -166,12 +180,25 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
             return
         }
 
-        // Return query result
-        analytics, err := db.GroupByUniq(property, timeRange)
-        if err != nil {
-            renderError(w, &errors.InternalError)
-            return
+        // Check for unique query parameter to call function accordingly
+        var analytics *database.AggregateList
+        unique := req.Form.Get("unique")
+
+        if strings.Compare(unique, "true") == 0 {
+            analytics, err = db.GroupByUniq(property, timeRange)
+            if err != nil {
+                renderError(w, &errors.InternalError)
+                return
+            }
+        } else {
+            analytics, err = db.GroupBy(property, timeRange)
+            if err != nil {
+                renderError(w, &errors.InternalError)
+                return
+            }
         }
+
+        // Return query result
         render(w, analytics, nil)
     })
 

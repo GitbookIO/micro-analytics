@@ -8,6 +8,19 @@ import (
 )
 
 // Open a DB and returns it
+func Open(dbPath string) (*sql.DB, error) {
+
+    // Make DB connection
+    db, err := sql.Open("sqlite3", dbPath)
+    if err != nil {
+        log.Printf("[DBOpen] Connection at DB %s in error: %v\n", dbPath, err)
+        return nil, err
+    }
+
+    return db, nil
+}
+
+// Open a DB and returns it
 // Create if necessary
 func OpenAndInitialize(dbPath string) (*sql.DB, error) {
     // DB schema
@@ -22,13 +35,11 @@ func OpenAndInitialize(dbPath string) (*sql.DB, error) {
         countryCode     TEXT
     )`
 
-    // DB index
-    // createIndex := `CREATE INDEX visits_object_time_idx ON visits (object, time)`
-
     // Make DB connection
     db, err := sql.Open("sqlite3", dbPath)
     if err != nil {
         log.Printf("[DBOpen] Connection at DB %s in error: %v\n", dbPath, err)
+        return nil, err
     }
 
     // Create table at initialization
@@ -38,13 +49,6 @@ func OpenAndInitialize(dbPath string) (*sql.DB, error) {
             log.Printf("Error %v creating table %s\n", err, dbPath)
             return nil, err
         }
-
-        // Create index
-        // _, err = db.Exec(createIndex)
-        // if err != nil {
-        //     log.Printf("Error %q creating index for table %s\n", err, dbPath)
-        //     return nil, err
-        // }
     }
 
     return db, nil
