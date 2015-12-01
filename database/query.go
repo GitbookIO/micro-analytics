@@ -198,6 +198,58 @@ func (db *Database) GroupByUniq(property string, timeRange *TimeRange) (*Aggrega
 }
 
 // Wrapper for querying a Database struct over a time interval
+func (db *Database) OverTime(interval int, timeRange *TimeRange) (*Intervals, error) {
+    // Query
+    queryBuilder := sq.
+        Select(fmt.Sprintf("(time / %d) * %d AS startTime", interval, interval), "COUNT(*)").
+        From("visits")
+
+    // Add time constraints if timeRange provided
+    if timeRange != nil {
+        if !timeRange.Start.Equal(time.Time{}) {
+            timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
+            queryBuilder = queryBuilder.Where(timeQuery)
+        }
+        if !timeRange.End.Equal(time.Time{}) {
+            timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
+            queryBuilder = queryBuilder.Where(timeQuery)
+        }
+    }
+
+    // Set query Group By condition
+    query, _, err := queryBuilder.GroupBy("startTime").ToSql()
+    if err != nil {
+        log.Printf("[DBQueryByProp] Error %v building query for DB %s", err, db.Name)
+        return nil, err
+    }
+
+    // Exec query
+    rows, err := db.Conn.Query(query)
+    if err != nil {
+        log.Printf("[DBQueryByProp] Error %v querying DB %s", err, db.Name)
+        return nil, err
+    }
+    defer rows.Close()
+
+    // Format results
+    intervals := Intervals{}
+    for rows.Next() {
+        result := Interval{}
+        var startTime int
+
+        rows.Scan(&startTime, &result.Total)
+
+        // Format Start and End from TIMESTAMP to ISO time
+        result.Start = time.Unix(int64(startTime), 0).Format(time.RFC3339)
+        result.End = time.Unix(int64(startTime + interval), 0).Format(time.RFC3339)
+
+        intervals.List = append(intervals.List, result)
+    }
+
+    return &intervals, nil
+}
+
+// Wrapper for querying a Database struct over a time interval
 func (db *Database) OverTimeUniq(interval int, timeRange *TimeRange) (*Intervals, error) {
     // Subquery for counting unique IPs
     subqueryBuilder := sq.
@@ -320,56 +372,4 @@ func (db *Database) CountUniqueWhere(property string, value string, timeRange *T
     }
 
     return result, nil
-}
-
-// Wrapper for querying a Database struct over a time interval
-func (db *Database) OverTime(interval int, timeRange *TimeRange) (*Intervals, error) {
-    // Query
-    queryBuilder := sq.
-        Select(fmt.Sprintf("(time / %d) * %d AS startTime", interval, interval), "COUNT(*)").
-        From("visits")
-
-    // Add time constraints if timeRange provided
-    if timeRange != nil {
-        if !timeRange.Start.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
-            queryBuilder = queryBuilder.Where(timeQuery)
-        }
-        if !timeRange.End.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
-            queryBuilder = queryBuilder.Where(timeQuery)
-        }
-    }
-
-    // Set query Group By condition
-    query, _, err := queryBuilder.GroupBy("startTime").ToSql()
-    if err != nil {
-        log.Printf("[DBQueryByProp] Error %v building query for DB %s", err, db.Name)
-        return nil, err
-    }
-
-    // Exec query
-    rows, err := db.Conn.Query(query)
-    if err != nil {
-        log.Printf("[DBQueryByProp] Error %v querying DB %s", err, db.Name)
-        return nil, err
-    }
-    defer rows.Close()
-
-    // Format results
-    intervals := Intervals{}
-    for rows.Next() {
-        result := Interval{}
-        var startTime int
-
-        rows.Scan(&startTime, &result.Total)
-
-        // Format Start and End from TIMESTAMP to ISO time
-        result.Start = time.Unix(int64(startTime), 0).Format(time.RFC3339)
-        result.End = time.Unix(int64(startTime + interval), 0).Format(time.RFC3339)
-
-        intervals.List = append(intervals.List, result)
-    }
-
-    return &intervals, nil
 }
