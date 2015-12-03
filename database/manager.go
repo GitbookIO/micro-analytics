@@ -2,6 +2,7 @@ package database
 
 import (
     "database/sql"
+    "errors"
     "log"
     "os"
     "path"
@@ -17,6 +18,7 @@ type Database struct {
     Conn        *sql.DB
     StartTime   time.Time
     Freed       chan bool
+    Pending     int
 }
 
 type DBManager struct {
@@ -41,6 +43,23 @@ func NewManager(directory string, maxDBs int) *DBManager {
         UnlockDB:   make(chan string),
     }
 
+    // Handle cleaning connections
+    // Allow for more than maxDBs to run at full charge
+    go func() {
+        for {
+            time.Sleep(time.Second * 5)
+
+            nbActive := len(manager.DBs)
+            var err error
+
+            for nbActive > manager.maxDBs && err == nil {
+                log.Printf("[DBManager] Cleaning alive connections: %v / %v available", nbActive, manager.maxDBs)
+                nbActive = len(manager.DBs)
+                err = manager.RemoveUnpending()
+            }
+        }
+    }()
+
     // Handle registering DBs
     go func() {
         for {
@@ -49,7 +68,7 @@ func NewManager(directory string, maxDBs int) *DBManager {
             db, err := manager.GetDB(dbName)
             if err != nil {
                 log.Printf("[DBManager] Impossible to get DB %s: %v\n", dbName, err)
-                log.Fatal("Stopping...")
+                // log.Fatal("Stopping...")
             }
             manager.SendDB <- db
         }
@@ -59,8 +78,9 @@ func NewManager(directory string, maxDBs int) *DBManager {
     go func() {
         for {
             dbName := <-manager.UnlockDB
-                // log.Printf("[DBManager] Unlocking DB %s\n", dbName)
-                manager.DBs[dbName].Freed <- true
+            // log.Printf("[DBManager] Unlocking DB %s\n", dbName)
+            manager.DBs[dbName].Pending -= 1
+            manager.DBs[dbName].Freed <- true
         }
     }()
 
@@ -70,10 +90,13 @@ func NewManager(directory string, maxDBs int) *DBManager {
 // Attach a new DB to the manager
 func (manager *DBManager) Register(db *Database) {
     // Unregister a DB if manager is full
-    nbActive := len(manager.DBs)
-    if nbActive == manager.maxDBs {
-        manager.RemoveLongestAlive()
-    }
+
+    // This is now taken care of in manager go routine
+
+    // nbActive := len(manager.DBs)
+    // if nbActive == manager.maxDBs {
+    //     manager.RemoveLongestAlive()
+    // }
 
     manager.DBs[db.Name] = db
     // log.Printf("[DBManager] Registered DB %s\n", db.Name)
@@ -92,19 +115,25 @@ func (manager *DBManager) Unregister(dbName string) {
 }
 
 // Detach the longest opened DB from manager
-func (manager *DBManager) RemoveLongestAlive() {
+func (manager *DBManager) RemoveUnpending() error {
     var toDelete string
     minTime := time.Now()
 
     for dbName, db := range manager.DBs {
-        if db.StartTime.Before(minTime) {
+        if db.Pending == 0 && db.StartTime.Before(minTime) {
             toDelete = dbName
             minTime = db.StartTime
         }
     }
 
+    if len(toDelete) == 0 {
+        // log.Printf("[DBManager] All registered DBs are busy at this time\n")
+        return errors.New("All registered DBs are busy at this time")
+    }
+
     manager.Unregister(toDelete)
-    log.Printf("[DBManager] Unregistered DB %s\n", toDelete)
+    // log.Printf("[DBManager] Unregistered DB %s\n", toDelete)
+    return nil
 }
 
 // Unregister all attached DBs
@@ -118,6 +147,7 @@ func (manager *DBManager) Purge() {
 func (manager *DBManager) GetDB(dbName string) (*Database, error) {
     // Return DB if already registered
     if db, ok := manager.DBs[dbName]; ok {
+        db.Pending += 1
         // Wait for DB to return from last query
         <-db.Freed
         // log.Printf("[DBManager] Returning registered DB %s\n", dbName)
@@ -130,6 +160,7 @@ func (manager *DBManager) GetDB(dbName string) (*Database, error) {
         Conn:       nil,
         StartTime:  time.Now(),
         Freed:      make(chan bool, 1),
+        Pending:    1,
     }
 
     manager.Register(&database)

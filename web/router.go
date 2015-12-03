@@ -112,7 +112,7 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
         }
 
         // Unlock DB
-        dbManager.Unlock <- dbName
+        dbManager.UnlockDB <- dbName
 
         // Return query result
         render(w, analytics, nil)
