@@ -90,11 +90,8 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
         }
 
         // Get DB from manager
-        db, err := dbManager.GetDB(dbName)
-        if err != nil {
-            renderError(w, &errors.InternalError)
-            return
-        }
+        dbManager.RequestDB <- dbName
+        db := <-dbManager.SendDB
 
         // Check for unique query parameter to call function accordingly
         var analytics *database.Intervals
@@ -113,6 +110,9 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
                 return
             }
         }
+
+        // Unlock DB
+        dbManager.Unlock <- dbName
 
         // Return query result
         render(w, analytics, nil)
@@ -174,11 +174,8 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
         }
 
         // Get DB from manager
-        db, err := dbManager.GetDB(dbName)
-        if err != nil {
-            renderError(w, &errors.InternalError)
-            return
-        }
+        dbManager.RequestDB <- dbName
+        db := <-dbManager.SendDB
 
         // Check for unique query parameter to call function accordingly
         var analytics *database.AggregateList
@@ -197,6 +194,9 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
                 return
             }
         }
+
+        // Unlock DB
+        dbManager.UnlockDB <- dbName
 
         // Return query result
         render(w, analytics, nil)
@@ -250,11 +250,8 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
         }
 
         // Get DB from manager
-        db, err := dbManager.GetDB(dbName)
-        if err != nil {
-            renderError(w, &errors.InternalError)
-            return
-        }
+        dbManager.RequestDB <- dbName
+        db := <-dbManager.SendDB
 
         // Return query result
         analytics, err := db.Query(timeRange)
@@ -262,6 +259,10 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
             renderError(w, &errors.InternalError)
             return
         }
+
+        // Unlock DB
+        dbManager.UnlockDB <- dbName
+
         render(w, analytics, nil)
     })
 
@@ -312,18 +313,82 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
         // Get countryCode from GeoIp
         analytic.CountryCode, err = geoip.GeoIpLookup(geolite2, postData.Ip)
 
+        // Get DB from manager
+        dbManager.RequestDB <- dbName
+        db := <-dbManager.SendDB
+
         // Insert data if everything's OK
-        db, err := dbManager.GetDB(dbName)
-        if err != nil {
-            renderError(w, &errors.InternalError)
-            return
-        }
         if err = db.Insert(analytic); err != nil {
             renderError(w, &errors.InsertFailed)
             return
         }
 
-        log.Printf("[Router] Successfully inserted analytic: %#v", analytic)
+        // log.Printf("[Router] Successfully inserted analytic: %#v", analytic)
+
+        // Unlock DB
+        dbManager.UnlockDB <- dbName
+
+        render(w, nil, nil)
+    })
+
+    /////
+    // Push analytics as-is to a DB
+    /////
+    r.Path("/{dbName}/special").
+        Methods("POST").
+        HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+
+        type SpecialAnalytic struct {
+            Time            int         `json:"time"`
+            Event           string      `json:"event"`
+            Path            string      `json:"path"`
+            Ip              string      `json:"ip"`
+            Platform        string      `json:"platform"`
+            RefererDomain   string      `json:"refererDomain"`
+            CountryCode     string      `json:"countryCode"`
+        }
+
+        // Get dbName from URL
+        vars := mux.Vars(req)
+        dbName := vars["dbName"]
+
+        // Parse JSON POST data
+        postData := SpecialAnalytic{}
+        jsonDecoder := json.NewDecoder(req.Body)
+        err := jsonDecoder.Decode(&postData)
+
+        // Invalid JSON
+        if err != nil {
+            renderError(w, &errors.InvalidJSON)
+            return
+        }
+
+        // Create Analytic to inject in DB
+        analytic := database.Analytic{
+            Time:           time.Unix(int64(postData.Time), 0),
+            Event:          postData.Event,
+            Path:           postData.Path,
+            Ip:             postData.Ip,
+            Platform:       postData.Platform,
+            RefererDomain:  postData.RefererDomain,
+            CountryCode:    postData.CountryCode,
+        }
+
+        // Get DB from manager
+        dbManager.RequestDB <- dbName
+        db := <-dbManager.SendDB
+
+        // Insert data
+        if err = db.Insert(analytic); err != nil {
+            renderError(w, &errors.InsertFailed)
+            return
+        }
+
+        // log.Printf("[Router] Successfully inserted analytic: %#v", analytic)
+
+        // Unlock DB
+        dbManager.UnlockDB <- dbName
+
         render(w, nil, nil)
     })
 
