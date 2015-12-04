@@ -30,7 +30,7 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
         HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
         msg := map[string]string{
-            "message":  "Welcome to analytics !",
+            "message": "Welcome to analytics !",
         }
         render(w, msg, nil)
     })
@@ -79,7 +79,7 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
 
         // Cast interval to an integer
         // Defaults to 1 day
-        interval := 24*60*60
+        interval := 24 * 60 * 60
         if len(intervalStr) > 0 {
             interval, err = strconv.Atoi(intervalStr)
             if err != nil {
@@ -92,6 +92,14 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
         // Get DB from manager
         dbManager.RequestDB <- dbName
         db := <-dbManager.SendDB
+
+        // If value is in Cacher, return directly
+        response, inCache := dbManager.Cacher[req.URL.String()]
+        if inCache {
+            dbManager.UnlockDB <- dbName
+            render(w, response, nil)
+            return
+        }
 
         // Check for unique query parameter to call function accordingly
         var analytics *database.Intervals
@@ -114,6 +122,9 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
         // Unlock DB
         dbManager.UnlockDB <- dbName
 
+        // Store response in Cacher before sending
+        dbManager.Cacher[req.URL.String()] = analytics
+
         // Return query result
         render(w, analytics, nil)
     })
@@ -126,10 +137,10 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
         HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
         // Map allowed requests w/ columns names in DB schema
         allowedProperties := map[string]string{
-            "countries":    "countryCode",
-            "platforms":    "platform",
-            "domains":      "refererDomain",
-            "events":       "event",
+            "countries": "countryCode",
+            "platforms": "platform",
+            "domains":   "refererDomain",
+            "events":    "event",
         }
         // Get params from URL
         vars := mux.Vars(req)
@@ -177,6 +188,14 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
         dbManager.RequestDB <- dbName
         db := <-dbManager.SendDB
 
+        // If value is in Cacher, return directly
+        response, inCache := dbManager.Cacher[req.URL.String()]
+        if inCache {
+            dbManager.UnlockDB <- dbName
+            render(w, response, nil)
+            return
+        }
+
         // Check for unique query parameter to call function accordingly
         var analytics *database.AggregateList
         unique := req.Form.Get("unique")
@@ -197,6 +216,9 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
 
         // Unlock DB
         dbManager.UnlockDB <- dbName
+
+        // Store response in Cacher before sending
+        dbManager.Cacher[req.URL.String()] = analytics
 
         // Return query result
         render(w, analytics, nil)
@@ -253,6 +275,14 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
         dbManager.RequestDB <- dbName
         db := <-dbManager.SendDB
 
+        // If value is in Cacher, return directly
+        response, inCache := dbManager.Cacher[req.URL.String()]
+        if inCache {
+            dbManager.UnlockDB <- dbName
+            render(w, response, nil)
+            return
+        }
+
         // Return query result
         analytics, err := db.Query(timeRange)
         if err != nil {
@@ -262,6 +292,9 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
 
         // Unlock DB
         dbManager.UnlockDB <- dbName
+
+        // Store response in Cacher before sending
+        dbManager.Cacher[req.URL.String()] = analytics
 
         render(w, analytics, nil)
     })
@@ -290,10 +323,10 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
 
         // Create Analytic to inject in DB
         analytic := database.Analytic{
-            Time:   time.Now(),
-            Event:  postData.Event,
-            Path:   postData.Path,
-            Ip:     postData.Ip,
+            Time:  time.Now(),
+            Event: postData.Event,
+            Path:  postData.Path,
+            Ip:    postData.Ip,
         }
 
         // Set time from POST data if passed
@@ -339,13 +372,13 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
         HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
         type SpecialAnalytic struct {
-            Time            int         `json:"time"`
-            Event           string      `json:"event"`
-            Path            string      `json:"path"`
-            Ip              string      `json:"ip"`
-            Platform        string      `json:"platform"`
-            RefererDomain   string      `json:"refererDomain"`
-            CountryCode     string      `json:"countryCode"`
+            Time          int    `json:"time"`
+            Event         string `json:"event"`
+            Path          string `json:"path"`
+            Ip            string `json:"ip"`
+            Platform      string `json:"platform"`
+            RefererDomain string `json:"refererDomain"`
+            CountryCode   string `json:"countryCode"`
         }
 
         // Get dbName from URL
@@ -365,13 +398,13 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
 
         // Create Analytic to inject in DB
         analytic := database.Analytic{
-            Time:           time.Unix(int64(postData.Time), 0),
-            Event:          postData.Event,
-            Path:           postData.Path,
-            Ip:             postData.Ip,
-            Platform:       postData.Platform,
-            RefererDomain:  postData.RefererDomain,
-            CountryCode:    postData.CountryCode,
+            Time:          time.Unix(int64(postData.Time), 0),
+            Event:         postData.Event,
+            Path:          postData.Path,
+            Ip:            postData.Ip,
+            Platform:      postData.Platform,
+            RefererDomain: postData.RefererDomain,
+            CountryCode:   postData.CountryCode,
         }
 
         // Get DB from manager

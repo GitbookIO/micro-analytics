@@ -14,33 +14,35 @@ import (
 const dbFileName = "analytics.db"
 
 type Database struct {
-    Name        string
-    Conn        *sql.DB
-    StartTime   time.Time
-    Freed       chan bool
-    Pending     int
+    Name      string
+    Conn      *sql.DB
+    StartTime time.Time
+    Freed     chan bool
+    Pending   int
 }
 
 type DBManager struct {
-    DBs         map[string]*Database
-    StartTime   time.Time
-    maxDBs      int
-    directory   string
-    RequestDB   chan string
-    SendDB      chan *Database
-    UnlockDB    chan string
+    DBs       map[string]*Database
+    StartTime time.Time
+    maxDBs    int
+    directory string
+    RequestDB chan string
+    SendDB    chan *Database
+    UnlockDB  chan string
+    Cacher    map[string]interface{}
 }
 
 // Get a new DBManager
 func NewManager(directory string, maxDBs int) *DBManager {
     manager := DBManager{
-        DBs:        map[string]*Database{},
-        StartTime:  time.Now(),
-        maxDBs:     maxDBs,
-        directory:  directory,
-        RequestDB:  make(chan string),
-        SendDB:     make(chan *Database),
-        UnlockDB:   make(chan string),
+        DBs:       map[string]*Database{},
+        StartTime: time.Now(),
+        maxDBs:    maxDBs,
+        directory: directory,
+        RequestDB: make(chan string),
+        SendDB:    make(chan *Database),
+        UnlockDB:  make(chan string),
+        Cacher:    make(map[string]interface{}),
     }
 
     // Handle cleaning connections
@@ -138,7 +140,7 @@ func (manager *DBManager) RemoveUnpending() error {
 
 // Unregister all attached DBs
 func (manager *DBManager) Purge() {
-    for dbName, _ := range manager.DBs {
+    for dbName := range manager.DBs {
         manager.Unregister(dbName)
     }
 }
@@ -156,11 +158,11 @@ func (manager *DBManager) GetDB(dbName string) (*Database, error) {
 
     // Register DB
     database := Database{
-        Name:       dbName,
-        Conn:       nil,
-        StartTime:  time.Now(),
-        Freed:      make(chan bool, 1),
-        Pending:    1,
+        Name:      dbName,
+        Conn:      nil,
+        StartTime: time.Now(),
+        Freed:     make(chan bool, 1),
+        Pending:   1,
     }
 
     manager.Register(&database)
