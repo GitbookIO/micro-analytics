@@ -41,6 +41,11 @@ func main() {
             Value: 10,
             Usage: "Max number of alive DB connections",
         },
+        cli.IntFlag{
+            Name:  "cache-size, s",
+            Value: 100000,
+            Usage: "Max number of cached requests",
+        },
     }
 
     var log = logger.New("[Main]")
@@ -48,25 +53,28 @@ func main() {
     // Main app code
     app.Action = func(ctx *cli.Context) {
         // Extract options from CLI args
-        mainDirectory := path.Clean(ctx.String("directory"))
-        maxDBs := ctx.Int("connections")
+        managerOpts := database.ManagerOpts{
+            Directory: path.Clean(ctx.String("directory")),
+            MaxDBs:    ctx.Int("connections"),
+            CacheSize: ctx.Int("cache-size"),
+        }
 
         // Create Analytics directory if inexistant
-        dirExists, err := utils.PathExists(mainDirectory)
+        dirExists, err := utils.PathExists(managerOpts.Directory)
         if err != nil {
             log.Error("Analytics directory path error [%v]", err)
             os.Exit(1)
         }
         if !dirExists {
-            log.Info("Analytics directory doesn't exist: %s", mainDirectory)
+            log.Info("Analytics directory doesn't exist: %s", managerOpts.Directory)
             log.Info("Creating Analytics directory...")
-            os.Mkdir(mainDirectory, os.ModePerm)
+            os.Mkdir(managerOpts.Directory, os.ModePerm)
         } else {
-            log.Info("Working with existing Analytics directory: %s", mainDirectory)
+            log.Info("Working with existing Analytics directory: %s", managerOpts.Directory)
         }
 
         // Initiate DBManager
-        dbManager := database.NewManager(mainDirectory, maxDBs)
+        dbManager := database.NewManager(managerOpts)
 
         // Initiate Geolite2 DB Reader
         geolite2, err := geoip.GetGeoLite2Reader()

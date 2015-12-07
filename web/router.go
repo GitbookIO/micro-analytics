@@ -18,9 +18,17 @@ import (
     "github.com/GitbookIO/micro-analytics/web/errors"
 )
 
-func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader, appVersion string) http.Handler {
+type RouterOpts struct {
+    DBManager      *database.DBManager
+    Geolite2Reader *maxminddb.Reader
+    Version        string
+}
+
+func NewRouter(opts RouterOpts) http.Handler {
     // Create the app router
     r := mux.NewRouter()
+    dbManager := opts.DBManager
+    geolite2 := opts.Geolite2Reader
 
     var log = logger.New("[Router]")
 
@@ -33,7 +41,7 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader, appVer
 
         msg := map[string]string{
             "message": "Welcome to analytics !",
-            "version": appVersion,
+            "version": opts.Version,
         }
         render(w, msg, nil)
     })
@@ -96,8 +104,8 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader, appVer
         dbManager.RequestDB <- dbName
         db := <-dbManager.SendDB
 
-        // If value is in Cacher, return directly
-        response, inCache := dbManager.Cacher[req.URL.String()]
+        // If value is in Cache, return directly
+        response, inCache := dbManager.Cache.Get(req.URL.String())
         if inCache {
             dbManager.UnlockDB <- dbName
             render(w, response, nil)
@@ -125,8 +133,8 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader, appVer
         // Unlock DB
         dbManager.UnlockDB <- dbName
 
-        // Store response in Cacher before sending
-        dbManager.Cacher[req.URL.String()] = analytics
+        // Store response in Cache before sending
+        dbManager.Cache.Add(req.URL.String(), analytics)
 
         // Return query result
         render(w, analytics, nil)
@@ -191,8 +199,8 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader, appVer
         dbManager.RequestDB <- dbName
         db := <-dbManager.SendDB
 
-        // If value is in Cacher, return directly
-        response, inCache := dbManager.Cacher[req.URL.String()]
+        // If value is in Cache, return directly
+        response, inCache := dbManager.Cache.Get(req.URL.String())
         if inCache {
             dbManager.UnlockDB <- dbName
             render(w, response, nil)
@@ -220,8 +228,8 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader, appVer
         // Unlock DB
         dbManager.UnlockDB <- dbName
 
-        // Store response in Cacher before sending
-        dbManager.Cacher[req.URL.String()] = analytics
+        // Store response in Cache before sending
+        dbManager.Cache.Add(req.URL.String(), analytics)
 
         // Return query result
         render(w, analytics, nil)
@@ -278,8 +286,8 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader, appVer
         dbManager.RequestDB <- dbName
         db := <-dbManager.SendDB
 
-        // If value is in Cacher, return directly
-        response, inCache := dbManager.Cacher[req.URL.String()]
+        // If value is in Cache, return directly
+        response, inCache := dbManager.Cache.Get(req.URL.String())
         if inCache {
             dbManager.UnlockDB <- dbName
             render(w, response, nil)
@@ -296,8 +304,8 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader, appVer
         // Unlock DB
         dbManager.UnlockDB <- dbName
 
-        // Store response in Cacher before sending
-        dbManager.Cacher[req.URL.String()] = analytics
+        // Store response in Cache before sending
+        dbManager.Cache.Add(req.URL.String(), analytics)
 
         render(w, analytics, nil)
     })

@@ -21,7 +21,12 @@ type ServerOpts struct {
 // Build a http.Server based on the options
 func NewServer(opts ServerOpts) (*http.Server, error) {
     // Define handler
-    handler := web.NewRouter(opts.DBManager, opts.Geolite2Reader, opts.Version)
+    routerOpts := web.RouterOpts{
+        DBManager:      opts.DBManager,
+        Geolite2Reader: opts.Geolite2Reader,
+        Version:        opts.Version,
+    }
+    handler := web.NewRouter(routerOpts)
 
     // Use logging
     handler = handlers.LoggingHandler(os.Stderr, handler)
