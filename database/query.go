@@ -2,15 +2,17 @@ package database
 
 import (
     "fmt"
-    "log"
     "time"
 
-    sq "github.com/Masterminds/squirrel"
     "github.com/GitbookIO/micro-analytics/utils/geoip"
+    sq "github.com/Masterminds/squirrel"
+    "github.com/azer/logger"
 )
 
 // Wrapper for querying a Database struct
 func (db *Database) Query(timeRange *TimeRange) (*Analytics, error) {
+    var log = logger.New("[Database.Query]")
+
     // Query
     queryBuilder := sq.
         Select("time", "event", "path", "ip", "platform", "refererDomain", "countryCode").
@@ -30,14 +32,14 @@ func (db *Database) Query(timeRange *TimeRange) (*Analytics, error) {
 
     query, _, err := queryBuilder.ToSql()
     if err != nil {
-        log.Printf("[DBQueryByProp] Error %v building query for DB %s", err, db.Name)
+        log.Error("Error [%v] building query for DB %s", err, db.Name)
         return nil, err
     }
 
     // Exec query
     rows, err := db.Conn.Query(query)
     if err != nil {
-        log.Printf("[DBQuery] Error %v querying DB %s", err, db.Name)
+        log.Error("Error [%v] querying DB %s", err, db.Name)
         return nil, err
     }
     defer rows.Close()
@@ -63,6 +65,8 @@ func (db *Database) Query(timeRange *TimeRange) (*Analytics, error) {
 
 // Wrapper for querying a Database struct grouped by a property
 func (db *Database) GroupBy(property string, timeRange *TimeRange) (*AggregateList, error) {
+    var log = logger.New("[Database.GroupBy]")
+
     // Query
     queryBuilder := sq.
         Select(property, "COUNT(*)").
@@ -83,14 +87,14 @@ func (db *Database) GroupBy(property string, timeRange *TimeRange) (*AggregateLi
     // Set query Group By condition
     query, _, err := queryBuilder.GroupBy(property).ToSql()
     if err != nil {
-        log.Printf("[DBQueryByProp] Error %v building query for DB %s", err, db.Name)
+        log.Error("Error [%v] building query for DB %s", err, db.Name)
         return nil, err
     }
 
     // Exec query
     rows, err := db.Conn.Query(query)
     if err != nil {
-        log.Printf("[DBQueryByProp] Error %v querying DB %s", err, db.Name)
+        log.Error("Error [%v] querying DB %s", err, db.Name)
         return nil, err
     }
     defer rows.Close()
@@ -115,6 +119,8 @@ func (db *Database) GroupBy(property string, timeRange *TimeRange) (*AggregateLi
 
 // Wrapper for querying a Database struct grouped by a property
 func (db *Database) GroupByUniq(property string, timeRange *TimeRange) (*AggregateList, error) {
+    var log = logger.New("[Database.GroupByUniq]")
+
     // Subquery for counting unique IPs
     subqueryBuilder := sq.
         Select(property, "COUNT(DISTINCT ip) AS uniqueCount").
@@ -135,7 +141,7 @@ func (db *Database) GroupByUniq(property string, timeRange *TimeRange) (*Aggrega
     // Format subquery
     subquery, _, err := subqueryBuilder.GroupBy(property).ToSql()
     if err != nil {
-        log.Printf("[DBQueryByProp] Error %v building subquery for DB %s", err, db.Name)
+        log.Error("Error [%v] building subquery for DB %s", err, db.Name)
         return nil, err
     }
 
@@ -166,14 +172,14 @@ func (db *Database) GroupByUniq(property string, timeRange *TimeRange) (*Aggrega
     // Format query
     query, _, err := queryBuilder.GroupBy(tableProperty).ToSql()
     if err != nil {
-        log.Printf("[DBQueryByProp] Error %v building query for DB %s", err, db.Name)
+        log.Error("Error [%v] building query for DB %s", err, db.Name)
         return nil, err
     }
 
     // Exec query
     rows, err := db.Conn.Query(query)
     if err != nil {
-        log.Printf("[DBQueryByProp] Error %v querying DB %s", err, db.Name)
+        log.Error("Error [%v] querying DB %s", err, db.Name)
         return nil, err
     }
     defer rows.Close()
@@ -199,6 +205,8 @@ func (db *Database) GroupByUniq(property string, timeRange *TimeRange) (*Aggrega
 
 // Wrapper for querying a Database struct over a time interval
 func (db *Database) OverTime(interval int, timeRange *TimeRange) (*Intervals, error) {
+    var log = logger.New("[Database.OverTime]")
+
     // Query
     queryBuilder := sq.
         Select(fmt.Sprintf("(time / %d) * %d AS startTime", interval, interval), "COUNT(*)").
@@ -219,14 +227,14 @@ func (db *Database) OverTime(interval int, timeRange *TimeRange) (*Intervals, er
     // Set query Group By condition
     query, _, err := queryBuilder.GroupBy("startTime").ToSql()
     if err != nil {
-        log.Printf("[DBQueryByProp] Error %v building query for DB %s", err, db.Name)
+        log.Error("Error [%v] building query for DB %s", err, db.Name)
         return nil, err
     }
 
     // Exec query
     rows, err := db.Conn.Query(query)
     if err != nil {
-        log.Printf("[DBQueryByProp] Error %v querying DB %s", err, db.Name)
+        log.Error("Error [%v] querying DB %s", err, db.Name)
         return nil, err
     }
     defer rows.Close()
@@ -241,7 +249,7 @@ func (db *Database) OverTime(interval int, timeRange *TimeRange) (*Intervals, er
 
         // Format Start and End from TIMESTAMP to ISO time
         result.Start = time.Unix(int64(startTime), 0).Format(time.RFC3339)
-        result.End = time.Unix(int64(startTime + interval), 0).Format(time.RFC3339)
+        result.End = time.Unix(int64(startTime+interval), 0).Format(time.RFC3339)
 
         intervals.List = append(intervals.List, result)
     }
@@ -251,6 +259,8 @@ func (db *Database) OverTime(interval int, timeRange *TimeRange) (*Intervals, er
 
 // Wrapper for querying a Database struct over a time interval
 func (db *Database) OverTimeUniq(interval int, timeRange *TimeRange) (*Intervals, error) {
+    var log = logger.New("[Database.OverTimeUniq]")
+
     // Subquery for counting unique IPs
     subqueryBuilder := sq.
         Select(fmt.Sprintf("(time / %d) * %d AS sqStartTime", interval, interval), "COUNT(DISTINCT ip) AS uniqueCount").
@@ -271,7 +281,7 @@ func (db *Database) OverTimeUniq(interval int, timeRange *TimeRange) (*Intervals
     // Format subquery
     subquery, _, err := subqueryBuilder.GroupBy("sqStartTime").ToSql()
     if err != nil {
-        log.Printf("[DBQueryByProp] Error %v building subquery for DB %s", err, db.Name)
+        log.Error("Error [%v] building subquery for DB %s", err, db.Name)
         return nil, err
     }
 
@@ -299,14 +309,14 @@ func (db *Database) OverTimeUniq(interval int, timeRange *TimeRange) (*Intervals
     // Set query Group By condition
     query, _, err := queryBuilder.GroupBy("startTime").ToSql()
     if err != nil {
-        log.Printf("[DBQueryByProp] Error %v building query for DB %s", err, db.Name)
+        log.Error("Error [%v] building query for DB %s", err, db.Name)
         return nil, err
     }
 
     // Exec query
     rows, err := db.Conn.Query(query)
     if err != nil {
-        log.Printf("[DBQueryByProp] Error %v querying DB %s", err, db.Name)
+        log.Error("Error [%v] querying DB %s", err, db.Name)
         return nil, err
     }
     defer rows.Close()
@@ -321,7 +331,7 @@ func (db *Database) OverTimeUniq(interval int, timeRange *TimeRange) (*Intervals
 
         // Format Start and End from TIMESTAMP to ISO time
         result.Start = time.Unix(int64(startTime), 0).Format(time.RFC3339)
-        result.End = time.Unix(int64(startTime + interval), 0).Format(time.RFC3339)
+        result.End = time.Unix(int64(startTime+interval), 0).Format(time.RFC3339)
 
         intervals.List = append(intervals.List, result)
     }
@@ -331,6 +341,8 @@ func (db *Database) OverTimeUniq(interval int, timeRange *TimeRange) (*Intervals
 
 // Wrapper for querying a Database struct grouped by a property for which IP is unique
 func (db *Database) CountUniqueWhere(property string, value string, timeRange *TimeRange) (int, error) {
+    var log = logger.New("[Database.CountUniqueWhere]")
+
     // Query
     queryBuilder := sq.
         Select("COUNT(DISTINCT ip)").
@@ -354,14 +366,14 @@ func (db *Database) CountUniqueWhere(property string, value string, timeRange *T
     // Set query Group By condition
     query, _, err := queryBuilder.GroupBy(property).ToSql()
     if err != nil {
-        log.Printf("[DBQueryByProp] Error %v building query for DB %s", err, db.Name)
+        log.Error("Error [%v] building query for DB %s", err, db.Name)
         return 0, err
     }
 
     // Exec query
     rows, err := db.Conn.Query(query)
     if err != nil {
-        log.Printf("[DBQueryByProp] Error %v querying DB %s", err, db.Name)
+        log.Error("Error [%v] querying DB %s", err, db.Name)
         return 0, err
     }
     defer rows.Close()

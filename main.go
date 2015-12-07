@@ -1,13 +1,13 @@
 package main
 
 import (
-    "log"
     "os"
     "os/signal"
     "path"
     "strings"
     "syscall"
 
+    "github.com/azer/logger"
     "github.com/codegangsta/cli"
     "github.com/facebookgo/grace/gracehttp"
 
@@ -19,7 +19,7 @@ import (
 func main() {
     // App meta-data
     app := cli.NewApp()
-    app.Version = "0.9.0"
+    app.Version = "0.9.9"
     app.Name = "µAnalytics"
     app.Author = "Johan Preynat"
     app.Email = "johan.preynat@gmail.com"
@@ -32,16 +32,18 @@ func main() {
             EnvVar: "PORT",
         },
         cli.StringFlag{
-            Name:   "directory, d",
-            Value:  "./dbs/",
-            Usage:  "Database directory",
+            Name:  "directory, d",
+            Value: "./dbs/",
+            Usage: "Database directory",
         },
         cli.IntFlag{
-            Name:   "connections, c",
-            Value:  10,
-            Usage:  "Max number of alive DB connections",
+            Name:  "connections, c",
+            Value: 10,
+            Usage: "Max number of alive DB connections",
         },
     }
+
+    var log = logger.New("[Main]")
 
     // Main app code
     app.Action = func(ctx *cli.Context) {
@@ -52,14 +54,15 @@ func main() {
         // Create Analytics directory if inexistant
         dirExists, err := utils.PathExists(mainDirectory)
         if err != nil {
-            log.Fatal("[Main] Analytics directory path error:", err)
+            log.Error("Analytics directory path error [%v]", err)
+            os.Exit(1)
         }
         if !dirExists {
-            log.Printf("[Main] Analytics directory doesn't exist: %s\n", mainDirectory)
-            log.Println("[Main] Creating Analytics directory...")
+            log.Info("Analytics directory doesn't exist: %s", mainDirectory)
+            log.Info("Creating Analytics directory...")
             os.Mkdir(mainDirectory, os.ModePerm)
         } else {
-            log.Printf("[Main] Working with existing Analytics directory: %s\n", mainDirectory)
+            log.Info("Working with existing Analytics directory: %s", mainDirectory)
         }
 
         // Initiate DBManager
@@ -68,8 +71,8 @@ func main() {
         // Initiate Geolite2 DB Reader
         geolite2, err := geoip.GetGeoLite2Reader()
         if err != nil {
-            log.Printf("[Main] Error getting a geolite2Reader. Error %v\n", err)
-            log.Println("[Main] Running without Geolite2")
+            log.Info("Error [%v] obtaining a geolite2Reader", err)
+            log.Info("Running without Geolite2")
         }
 
         // Handle exit by softly closing DB connections
@@ -78,13 +81,13 @@ func main() {
         signal.Notify(c, syscall.SIGTERM)
         go func() {
             <-c
-            log.Println("[Main] Purging DB manager...")
+            log.Info("Purging DB manager...")
             dbManager.Purge()
-            log.Println("[Main] DB manager has been purged successfully")
-            log.Println("[Main] Closing Geolite2 connection...")
+            log.Info("DB manager has been purged successfully")
+            log.Info("Closing Geolite2 connection...")
             geolite2.Close()
-            log.Println("[Main] Geolite2 is now closed")
-            log.Println("[Main] Goodbye!")
+            log.Info("Geolite2 is now closed")
+            log.Info("Goodbye!")
             os.Exit(1)
         }()
 
@@ -96,16 +99,18 @@ func main() {
             Geolite2Reader: geolite2,
         }
 
-        log.Printf("[Main] Launching server with: %#v\n", opts)
+        log.Info("Launching server with: %#v", opts)
 
         server, err := NewServer(opts)
         if err != nil {
-            log.Fatal("ServerSetup:", err)
+            log.Error("ServerSetup error [%v]", err)
+            os.Exit(1)
         }
 
         // Run server
         if err := gracehttp.Serve(server); err != nil {
-            log.Fatal("ListenAndServe:", err)
+            log.Error("ListenAndServe error [%v]", err)
+            os.Exit(1)
         }
     }
 

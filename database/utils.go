@@ -2,18 +2,21 @@ package database
 
 import (
     "database/sql"
-    "log"
+    "github.com/azer/logger"
 )
 
 // Check wether the table already exists
 func TableExists(db *sql.DB) bool {
+    var log = logger.New("[Database.TableExists]")
+
     // Query
     existsQuery := `SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='visits'`
 
     // Execute query
     rows, err := db.Query(existsQuery)
     if err != nil {
-        log.Fatal("[DBUtils] Error checking if table exists\n", err)
+        log.Error("Error [%v] checking if table exists", err)
+        return false
     }
     defer rows.Close()
 

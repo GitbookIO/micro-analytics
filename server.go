@@ -12,22 +12,22 @@ import (
 )
 
 type ServerOpts struct {
-    Port            string
-    Version         string
-    DBManager       *database.DBManager
-    Geolite2Reader  *maxminddb.Reader
+    Port           string
+    Version        string
+    DBManager      *database.DBManager
+    Geolite2Reader *maxminddb.Reader
 }
 
 // Build a http.Server based on the options
 func NewServer(opts ServerOpts) (*http.Server, error) {
     // Define handler
-    handler := web.NewRouter(opts.DBManager, opts.Geolite2Reader)
+    handler := web.NewRouter(opts.DBManager, opts.Geolite2Reader, opts.Version)
 
     // Use logging
     handler = handlers.LoggingHandler(os.Stderr, handler)
 
     return &http.Server{
-        Addr:       opts.Port,
-        Handler:    handler,
+        Addr:    opts.Port,
+        Handler: handler,
     }, nil
 }

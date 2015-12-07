@@ -2,13 +2,13 @@ package web
 
 import (
     "encoding/json"
-    "log"
     "net/http"
     "net/url"
     "strconv"
     "strings"
     "time"
 
+    "github.com/azer/logger"
     "github.com/gorilla/mux"
     "github.com/oschwald/maxminddb-golang"
 
@@ -18,9 +18,11 @@ import (
     "github.com/GitbookIO/micro-analytics/web/errors"
 )
 
-func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.Handler {
+func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader, appVersion string) http.Handler {
     // Create the app router
     r := mux.NewRouter()
+
+    var log = logger.New("[Router]")
 
     /////
     // Welcome
@@ -31,6 +33,7 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
 
         msg := map[string]string{
             "message": "Welcome to analytics !",
+            "version": appVersion,
         }
         render(w, msg, nil)
     })
@@ -72,7 +75,7 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
         // Convert startTime and endTime to a TimeRange
         timeRange, err := database.NewTimeRange(startTime, endTime)
         if err != nil {
-            log.Printf("[Router] Error creating TimeRange %v\n", err)
+            log.Info("Error creating TimeRange %v", err)
             renderError(w, &errors.InvalidTimeFormat)
             return
         }
@@ -83,7 +86,7 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
         if len(intervalStr) > 0 {
             interval, err = strconv.Atoi(intervalStr)
             if err != nil {
-                log.Printf("[Router] Error casting interval to an int %v\n", err)
+                log.Info("Error casting interval to an int %v", err)
                 renderError(w, &errors.InvalidInterval)
                 return
             }
@@ -179,7 +182,7 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
 
         timeRange, err := database.NewTimeRange(startTime, endTime)
         if err != nil {
-            log.Printf("[Router] Error creating TimeRange %v\n", err)
+            log.Info("Error creating TimeRange %v", err)
             renderError(w, &errors.InvalidTimeFormat)
             return
         }
@@ -266,7 +269,7 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
 
         timeRange, err := database.NewTimeRange(startTime, endTime)
         if err != nil {
-            log.Printf("[Router] Error creating TimeRange %v\n", err)
+            log.Info("Error creating TimeRange %v", err)
             renderError(w, &errors.InvalidTimeFormat)
             return
         }
@@ -356,7 +359,7 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
             return
         }
 
-        // log.Printf("[Router] Successfully inserted analytic: %#v", analytic)
+        log.Info("Successfully inserted analytic: %#v", analytic)
 
         // Unlock DB
         dbManager.UnlockDB <- dbName
@@ -417,7 +420,7 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader) http.H
             return
         }
 
-        // log.Printf("[Router] Successfully inserted analytic: %#v", analytic)
+        log.Info("Successfully inserted analytic: %#v", analytic)
 
         // Unlock DB
         dbManager.UnlockDB <- dbName

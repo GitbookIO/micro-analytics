@@ -3,10 +3,11 @@ package database
 import (
     "database/sql"
     "errors"
-    "log"
     "os"
     "path"
     "time"
+
+    "github.com/azer/logger"
 
     "github.com/GitbookIO/micro-analytics/utils"
 )
@@ -30,6 +31,7 @@ type DBManager struct {
     SendDB    chan *Database
     UnlockDB  chan string
     Cacher    map[string]interface{}
+    Logger    *logger.Logger
 }
 
 // Get a new DBManager
@@ -43,6 +45,7 @@ func NewManager(directory string, maxDBs int) *DBManager {
         SendDB:    make(chan *Database),
         UnlockDB:  make(chan string),
         Cacher:    make(map[string]interface{}),
+        Logger:    logger.New("[DBManager]"),
     }
 
     // Handle cleaning connections
@@ -54,8 +57,9 @@ func NewManager(directory string, maxDBs int) *DBManager {
             nbActive := len(manager.DBs)
             var err error
 
+            manager.Logger.Info("Alive connections: %v / %v", nbActive, manager.maxDBs)
             for nbActive > manager.maxDBs && err == nil {
-                log.Printf("[DBManager] Cleaning alive connections: %v / %v available", nbActive, manager.maxDBs)
+                manager.Logger.Info("Cleaning alive connections: %v / %v available", nbActive, manager.maxDBs)
                 nbActive = len(manager.DBs)
                 err = manager.RemoveUnpending()
             }
@@ -66,11 +70,9 @@ func NewManager(directory string, maxDBs int) *DBManager {
     go func() {
         for {
             dbName := <-manager.RequestDB
-            // log.Printf("[DBManager] Request for DB %s\n", dbName)
             db, err := manager.GetDB(dbName)
             if err != nil {
-                log.Printf("[DBManager] Impossible to get DB %s: %v\n", dbName, err)
-                // log.Fatal("Stopping...")
+                manager.Logger.Error("Impossible to get DB %s: Error [%v]", dbName, err)
             }
             manager.SendDB <- db
         }
@@ -80,7 +82,7 @@ func NewManager(directory string, maxDBs int) *DBManager {
     go func() {
         for {
             dbName := <-manager.UnlockDB
-            // log.Printf("[DBManager] Unlocking DB %s\n", dbName)
+
             manager.DBs[dbName].Pending -= 1
             manager.DBs[dbName].Freed <- true
         }
@@ -91,17 +93,7 @@ func NewManager(directory string, maxDBs int) *DBManager {
 
 // Attach a new DB to the manager
 func (manager *DBManager) Register(db *Database) {
-    // Unregister a DB if manager is full
-
-    // This is now taken care of in manager go routine
-
-    // nbActive := len(manager.DBs)
-    // if nbActive == manager.maxDBs {
-    //     manager.RemoveLongestAlive()
-    // }
-
     manager.DBs[db.Name] = db
-    // log.Printf("[DBManager] Registered DB %s\n", db.Name)
 }
 
 // Fully remove a DB from manager
@@ -129,12 +121,10 @@ func (manager *DBManager) RemoveUnpending() error {
     }
 
     if len(toDelete) == 0 {
-        // log.Printf("[DBManager] All registered DBs are busy at this time\n")
         return errors.New("All registered DBs are busy at this time")
     }
 
     manager.Unregister(toDelete)
-    // log.Printf("[DBManager] Unregistered DB %s\n", toDelete)
     return nil
 }
 
@@ -152,7 +142,6 @@ func (manager *DBManager) GetDB(dbName string) (*Database, error) {
         db.Pending += 1
         // Wait for DB to return from last query
         <-db.Freed
-        // log.Printf("[DBManager] Returning registered DB %s\n", dbName)
         return db, nil
     }
 
@@ -171,7 +160,7 @@ func (manager *DBManager) GetDB(dbName string) (*Database, error) {
     dbDir := path.Join(manager.directory, dbName)
     dbExists, err := manager.DBExists(dbName)
     if err != nil {
-        log.Printf("[DBManager] Error %v reaching for DB %s\n", err, dbName)
+        manager.Logger.Error("Error [%v] reaching for DB %s", err, dbName)
         return nil, err
     }
 
@@ -180,20 +169,20 @@ func (manager *DBManager) GetDB(dbName string) (*Database, error) {
 
     if !dbExists {
         if err = os.Mkdir(dbDir, os.ModePerm); err != nil {
-            log.Printf("[DBManager] Error %v creating directory for DB %s\n", err, dbName)
+            manager.Logger.Error("Error [%v] creating directory for DB %s", err, dbName)
             return nil, err
         }
 
         // Open DB connection and returns the full Database
         conn, err = OpenAndInitialize(dbPath)
         if err != nil {
-            log.Printf("[DBManager] Error %v opening DB %s", err, dbName)
+            manager.Logger.Error("Error [%v] opening DB %s", err, dbName)
             return nil, err
         }
     } else {
         conn, err = Open(dbPath)
         if err != nil {
-            log.Printf("[DBManager] Error %v opening DB %s", err, dbName)
+            manager.Logger.Error("Error [%v] opening DB %s", err, dbName)
             return nil, err
         }
     }
@@ -210,7 +199,7 @@ func (manager *DBManager) DBExists(dbName string) (bool, error) {
     dbExists, err := utils.PathExists(dbPath)
     if err != nil {
         // Error reading file
-        log.Printf("[DBManager] Error [%#v] trying to reach file '%s'\n", err, dbPath)
+        manager.Logger.Error("Error [%v] trying to reach file '%s'", err, dbPath)
         return false, err
     }
 
