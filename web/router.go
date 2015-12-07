@@ -373,23 +373,12 @@ func NewRouter(dbManager *database.DBManager, geolite2 *maxminddb.Reader, appVer
     r.Path("/{dbName}/special").
         Methods("POST").
         HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-
-        type SpecialAnalytic struct {
-            Time          int    `json:"time"`
-            Event         string `json:"event"`
-            Path          string `json:"path"`
-            Ip            string `json:"ip"`
-            Platform      string `json:"platform"`
-            RefererDomain string `json:"refererDomain"`
-            CountryCode   string `json:"countryCode"`
-        }
-
         // Get dbName from URL
         vars := mux.Vars(req)
         dbName := vars["dbName"]
 
         // Parse JSON POST data
-        postData := SpecialAnalytic{}
+        postData := PostAnalytic{}
         jsonDecoder := json.NewDecoder(req.Body)
         err := jsonDecoder.Decode(&postData)
 

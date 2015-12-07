@@ -57,7 +57,6 @@ func NewManager(directory string, maxDBs int) *DBManager {
             nbActive := len(manager.DBs)
             var err error
 
-            manager.Logger.Info("Alive connections: %v / %v", nbActive, manager.maxDBs)
             for nbActive > manager.maxDBs && err == nil {
                 manager.Logger.Info("Cleaning alive connections: %v / %v available", nbActive, manager.maxDBs)
                 nbActive = len(manager.DBs)
