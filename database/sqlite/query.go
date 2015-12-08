@@ -1,9 +1,10 @@
-package database
+package sqlite
 
 import (
     "fmt"
     "time"
 
+    . "github.com/GitbookIO/micro-analytics/database/structures"
     "github.com/GitbookIO/micro-analytics/utils/geoip"
     sq "github.com/Masterminds/squirrel"
     "github.com/azer/logger"
@@ -64,7 +65,7 @@ func (db *Database) Query(timeRange *TimeRange) (*Analytics, error) {
 }
 
 // Wrapper for querying a Database struct grouped by a property
-func (db *Database) GroupBy(property string, timeRange *TimeRange) (*AggregateList, error) {
+func (db *Database) GroupBy(property string, timeRange *TimeRange) (*Aggregates, error) {
     var log = logger.New("[Database.GroupBy]")
 
     // Query
@@ -99,7 +100,7 @@ func (db *Database) GroupBy(property string, timeRange *TimeRange) (*AggregateLi
     }
     defer rows.Close()
 
-    list := AggregateList{}
+    list := Aggregates{}
     for rows.Next() {
         aggregate := Aggregate{}
         rows.Scan(&aggregate.Id, &aggregate.Total)
@@ -118,7 +119,7 @@ func (db *Database) GroupBy(property string, timeRange *TimeRange) (*AggregateLi
 }
 
 // Wrapper for querying a Database struct grouped by a property
-func (db *Database) GroupByUniq(property string, timeRange *TimeRange) (*AggregateList, error) {
+func (db *Database) GroupByUniq(property string, timeRange *TimeRange) (*Aggregates, error) {
     var log = logger.New("[Database.GroupByUniq]")
 
     // Subquery for counting unique IPs
@@ -185,7 +186,7 @@ func (db *Database) GroupByUniq(property string, timeRange *TimeRange) (*Aggrega
     defer rows.Close()
 
     // Format results
-    list := AggregateList{}
+    list := Aggregates{}
     for rows.Next() {
         aggregate := Aggregate{}
         rows.Scan(&aggregate.Id, &aggregate.Total, &aggregate.Unique)

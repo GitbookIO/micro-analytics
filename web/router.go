@@ -13,13 +13,16 @@ import (
     "github.com/oschwald/maxminddb-golang"
 
     "github.com/GitbookIO/micro-analytics/database"
+    driverErrors "github.com/GitbookIO/micro-analytics/database/errors"
+    "github.com/GitbookIO/micro-analytics/database/sqlite"
+    "github.com/GitbookIO/micro-analytics/database/structures"
     "github.com/GitbookIO/micro-analytics/utils"
     "github.com/GitbookIO/micro-analytics/utils/geoip"
     "github.com/GitbookIO/micro-analytics/web/errors"
 )
 
 type RouterOpts struct {
-    DBManager      *database.DBManager
+    DriverOpts     database.DriverOpts
     Geolite2Reader *maxminddb.Reader
     Version        string
 }
@@ -27,10 +30,12 @@ type RouterOpts struct {
 func NewRouter(opts RouterOpts) http.Handler {
     // Create the app router
     r := mux.NewRouter()
-    dbManager := opts.DBManager
+    var log = logger.New("[Router]")
+
     geolite2 := opts.Geolite2Reader
 
-    var log = logger.New("[Router]")
+    // Initiate DB driver
+    sqlite := sqlite.New(opts.DriverOpts)
 
     /////
     // Welcome
@@ -56,19 +61,6 @@ func NewRouter(opts RouterOpts) http.Handler {
         vars := mux.Vars(req)
         dbName := vars["dbName"]
 
-        // Check if DB file exists
-        dbExists, err := dbManager.DBExists(dbName)
-        if err != nil {
-            renderError(w, &errors.InternalError)
-            return
-        }
-
-        // DB doesn't exist
-        if !dbExists {
-            renderError(w, &errors.InvalidDatabaseName)
-            return
-        }
-
         // Parse request query
         if err := req.ParseForm(); err != nil {
             renderError(w, err)
@@ -81,9 +73,8 @@ func NewRouter(opts RouterOpts) http.Handler {
         intervalStr := req.Form.Get("interval")
 
         // Convert startTime and endTime to a TimeRange
-        timeRange, err := database.NewTimeRange(startTime, endTime)
+        timeRange, err := structures.NewTimeRange(startTime, endTime)
         if err != nil {
-            log.Info("Error creating TimeRange %v", err)
             renderError(w, &errors.InvalidTimeFormat)
             return
         }
@@ -94,47 +85,43 @@ func NewRouter(opts RouterOpts) http.Handler {
         if len(intervalStr) > 0 {
             interval, err = strconv.Atoi(intervalStr)
             if err != nil {
-                log.Info("Error casting interval to an int %v", err)
                 renderError(w, &errors.InvalidInterval)
                 return
             }
         }
 
-        // Get DB from manager
-        dbManager.RequestDB <- dbName
-        db := <-dbManager.SendDB
+        unique := false
+        if strings.Compare(req.Form.Get("unique"), "true") == 0 {
+            unique = true
+        }
 
-        // If value is in Cache, return directly
-        response, inCache := dbManager.Cache.Get(req.URL.String())
-        if inCache {
-            dbManager.UnlockDB <- dbName
-            render(w, response, nil)
+        // Construct Params object
+        params := structures.Params{
+            DBName:    dbName,
+            Interval:  interval,
+            TimeRange: timeRange,
+            Unique:    unique,
+            URL:       req.URL.String(),
+        }
+
+        analytics, err := sqlite.OverTime(params)
+        if err != nil {
+            if driverErr, ok := err.(*driverErrors.DriverError); ok {
+                switch driverErr.Code {
+                case 1:
+                    renderError(w, &errors.InternalError)
+                case 2:
+                    renderError(w, &errors.InvalidDatabaseName)
+                case 3:
+                    renderError(w, &errors.InvalidTimeFormat)
+                default:
+                    renderError(w, err)
+                }
+                return
+            }
+            renderError(w, err)
             return
         }
-
-        // Check for unique query parameter to call function accordingly
-        var analytics *database.Intervals
-        unique := req.Form.Get("unique")
-
-        if strings.Compare(unique, "true") == 0 {
-            analytics, err = db.OverTimeUniq(interval, timeRange)
-            if err != nil {
-                renderError(w, &errors.InternalError)
-                return
-            }
-        } else {
-            analytics, err = db.OverTime(interval, timeRange)
-            if err != nil {
-                renderError(w, &errors.InternalError)
-                return
-            }
-        }
-
-        // Unlock DB
-        dbManager.UnlockDB <- dbName
-
-        // Store response in Cache before sending
-        dbManager.Cache.Add(req.URL.String(), analytics)
 
         // Return query result
         render(w, analytics, nil)
@@ -165,19 +152,6 @@ func NewRouter(opts RouterOpts) http.Handler {
             return
         }
 
-        // Check if DB file exists
-        dbExists, err := dbManager.DBExists(dbName)
-        if err != nil {
-            renderError(w, &errors.InternalError)
-            return
-        }
-
-        // DB doesn't exist
-        if !dbExists {
-            renderError(w, &errors.InvalidDatabaseName)
-            return
-        }
-
         // Parse request query
         if err := req.ParseForm(); err != nil {
             renderError(w, err)
@@ -188,48 +162,42 @@ func NewRouter(opts RouterOpts) http.Handler {
         startTime := req.Form.Get("start")
         endTime := req.Form.Get("end")
 
-        timeRange, err := database.NewTimeRange(startTime, endTime)
+        timeRange, err := structures.NewTimeRange(startTime, endTime)
         if err != nil {
-            log.Info("Error creating TimeRange %v", err)
             renderError(w, &errors.InvalidTimeFormat)
             return
         }
 
-        // Get DB from manager
-        dbManager.RequestDB <- dbName
-        db := <-dbManager.SendDB
+        unique := false
+        if strings.Compare(req.Form.Get("unique"), "true") == 0 {
+            unique = true
+        }
 
-        // If value is in Cache, return directly
-        response, inCache := dbManager.Cache.Get(req.URL.String())
-        if inCache {
-            dbManager.UnlockDB <- dbName
-            render(w, response, nil)
+        // Construct Params object
+        params := structures.Params{
+            DBName:    dbName,
+            Property:  property,
+            TimeRange: timeRange,
+            Unique:    unique,
+            URL:       req.URL.String(),
+        }
+
+        analytics, err := sqlite.GroupBy(params)
+        if err != nil {
+            if driverErr, ok := err.(*driverErrors.DriverError); ok {
+                switch driverErr.Code {
+                case 1:
+                    renderError(w, &errors.InternalError)
+                case 2:
+                    renderError(w, &errors.InvalidDatabaseName)
+                default:
+                    renderError(w, err)
+                }
+                return
+            }
+            renderError(w, err)
             return
         }
-
-        // Check for unique query parameter to call function accordingly
-        var analytics *database.AggregateList
-        unique := req.Form.Get("unique")
-
-        if strings.Compare(unique, "true") == 0 {
-            analytics, err = db.GroupByUniq(property, timeRange)
-            if err != nil {
-                renderError(w, &errors.InternalError)
-                return
-            }
-        } else {
-            analytics, err = db.GroupBy(property, timeRange)
-            if err != nil {
-                renderError(w, &errors.InternalError)
-                return
-            }
-        }
-
-        // Unlock DB
-        dbManager.UnlockDB <- dbName
-
-        // Store response in Cache before sending
-        dbManager.Cache.Add(req.URL.String(), analytics)
 
         // Return query result
         render(w, analytics, nil)
@@ -242,28 +210,9 @@ func NewRouter(opts RouterOpts) http.Handler {
         Methods("GET").
         HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
-        // Parse form data
-        if err := req.ParseForm(); err != nil {
-            renderError(w, err)
-            return
-        }
-
         // Get dbName from URL
         vars := mux.Vars(req)
         dbName := vars["dbName"]
-
-        // Check if DB file exists
-        dbExists, err := dbManager.DBExists(dbName)
-        if err != nil {
-            renderError(w, &errors.InternalError)
-            return
-        }
-
-        // DB doesn't exist
-        if !dbExists {
-            renderError(w, &errors.InvalidDatabaseName)
-            return
-        }
 
         // Parse request query
         if err := req.ParseForm(); err != nil {
@@ -275,37 +224,35 @@ func NewRouter(opts RouterOpts) http.Handler {
         startTime := req.Form.Get("start")
         endTime := req.Form.Get("end")
 
-        timeRange, err := database.NewTimeRange(startTime, endTime)
+        timeRange, err := structures.NewTimeRange(startTime, endTime)
         if err != nil {
-            log.Info("Error creating TimeRange %v", err)
             renderError(w, &errors.InvalidTimeFormat)
             return
         }
 
-        // Get DB from manager
-        dbManager.RequestDB <- dbName
-        db := <-dbManager.SendDB
-
-        // If value is in Cache, return directly
-        response, inCache := dbManager.Cache.Get(req.URL.String())
-        if inCache {
-            dbManager.UnlockDB <- dbName
-            render(w, response, nil)
-            return
+        // Construct Params object
+        params := structures.Params{
+            DBName:    dbName,
+            TimeRange: timeRange,
+            URL:       req.URL.String(),
         }
 
-        // Return query result
-        analytics, err := db.Query(timeRange)
+        analytics, err := sqlite.Query(params)
         if err != nil {
-            renderError(w, &errors.InternalError)
+            if driverErr, ok := err.(*driverErrors.DriverError); ok {
+                switch driverErr.Code {
+                case 1:
+                    renderError(w, &errors.InternalError)
+                case 2:
+                    renderError(w, &errors.InvalidDatabaseName)
+                default:
+                    renderError(w, err)
+                }
+                return
+            }
+            renderError(w, err)
             return
         }
-
-        // Unlock DB
-        dbManager.UnlockDB <- dbName
-
-        // Store response in Cache before sending
-        dbManager.Cache.Add(req.URL.String(), analytics)
 
         render(w, analytics, nil)
     })
@@ -333,7 +280,7 @@ func NewRouter(opts RouterOpts) http.Handler {
         }
 
         // Create Analytic to inject in DB
-        analytic := database.Analytic{
+        analytic := structures.Analytic{
             Time:  time.Now(),
             Event: postData.Event,
             Path:  postData.Path,
@@ -357,20 +304,22 @@ func NewRouter(opts RouterOpts) http.Handler {
         // Get countryCode from GeoIp
         analytic.CountryCode, err = geoip.GeoIpLookup(geolite2, postData.Ip)
 
-        // Get DB from manager
-        dbManager.RequestDB <- dbName
-        db := <-dbManager.SendDB
+        // Construct Params object
+        params := structures.Params{
+            DBName: dbName,
+        }
 
-        // Insert data if everything's OK
-        if err = db.Insert(analytic); err != nil {
-            renderError(w, &errors.InsertFailed)
+        err = sqlite.Push(params, analytic)
+        if err != nil {
+            if _, ok := err.(*driverErrors.DriverError); ok {
+                renderError(w, &errors.InsertFailed)
+                return
+            }
+            renderError(w, err)
             return
         }
 
         log.Info("Successfully inserted analytic: %#v", analytic)
-
-        // Unlock DB
-        dbManager.UnlockDB <- dbName
 
         render(w, nil, nil)
     })
@@ -397,7 +346,7 @@ func NewRouter(opts RouterOpts) http.Handler {
         }
 
         // Create Analytic to inject in DB
-        analytic := database.Analytic{
+        analytic := structures.Analytic{
             Time:          time.Unix(int64(postData.Time), 0),
             Event:         postData.Event,
             Path:          postData.Path,
@@ -407,20 +356,22 @@ func NewRouter(opts RouterOpts) http.Handler {
             CountryCode:   postData.CountryCode,
         }
 
-        // Get DB from manager
-        dbManager.RequestDB <- dbName
-        db := <-dbManager.SendDB
+        // Construct Params object
+        params := structures.Params{
+            DBName: dbName,
+        }
 
-        // Insert data
-        if err = db.Insert(analytic); err != nil {
-            renderError(w, &errors.InsertFailed)
+        err = sqlite.Push(params, analytic)
+        if err != nil {
+            if _, ok := err.(*driverErrors.DriverError); ok {
+                renderError(w, &errors.InsertFailed)
+                return
+            }
+            renderError(w, err)
             return
         }
 
         log.Info("Successfully inserted analytic: %#v", analytic)
-
-        // Unlock DB
-        dbManager.UnlockDB <- dbName
 
         render(w, nil, nil)
     })
@@ -436,22 +387,29 @@ func NewRouter(opts RouterOpts) http.Handler {
         vars := mux.Vars(req)
         dbName := vars["dbName"]
 
-        // Check if DB file exists
-        dbExists, err := dbManager.DBExists(dbName)
+        // Construct Params object
+        params := structures.Params{
+            DBName: dbName,
+        }
+
+        err := sqlite.Delete(params)
         if err != nil {
-            renderError(w, &errors.InternalError)
+            if driverErr, ok := err.(*driverErrors.DriverError); ok {
+                switch driverErr.Code {
+                case 1:
+                    renderError(w, &errors.InternalError)
+                case 2:
+                    renderError(w, &errors.InvalidDatabaseName)
+                default:
+                    renderError(w, err)
+                }
+                return
+            }
+            renderError(w, err)
             return
         }
 
-        // DB doesn't exist
-        if !dbExists {
-            renderError(w, &errors.InvalidDatabaseName)
-            return
-        }
-
-        // Delete full DB directory
-        err = dbManager.DeleteDB(dbName)
-        render(w, nil, err)
+        render(w, nil, nil)
     })
 
     return r

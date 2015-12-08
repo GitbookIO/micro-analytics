@@ -14,7 +14,7 @@ import (
 type ServerOpts struct {
     Port           string
     Version        string
-    DBManager      *database.DBManager
+    DriverOpts     database.DriverOpts
     Geolite2Reader *maxminddb.Reader
 }
 
@@ -22,7 +22,7 @@ type ServerOpts struct {
 func NewServer(opts ServerOpts) (*http.Server, error) {
     // Define handler
     routerOpts := web.RouterOpts{
-        DBManager:      opts.DBManager,
+        DriverOpts:     opts.DriverOpts,
         Geolite2Reader: opts.Geolite2Reader,
         Version:        opts.Version,
     }

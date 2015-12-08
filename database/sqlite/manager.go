@@ -1,4 +1,4 @@
-package database
+package sqlite
 
 import (
     "database/sql"
@@ -10,6 +10,7 @@ import (
     "github.com/azer/logger"
     "github.com/hashicorp/golang-lru"
 
+    "github.com/GitbookIO/micro-analytics/database"
     "github.com/GitbookIO/micro-analytics/utils"
 )
 
@@ -36,9 +37,7 @@ type DBManager struct {
 }
 
 type ManagerOpts struct {
-    Directory string
-    MaxDBs    int
-    CacheSize int
+    database.DriverOpts
 }
 
 // Get a new DBManager
@@ -97,6 +96,13 @@ func NewManager(opts ManagerOpts) *DBManager {
             manager.DBs[dbName].Pending -= 1
             manager.DBs[dbName].Freed <- true
         }
+    }()
+
+    // Handle closing connections when app is killed
+    go func() {
+        <-opts.ClosingChannel
+        manager.Purge()
+        opts.ClosingChannel <- true
     }()
 
     return &manager
@@ -179,7 +185,7 @@ func (manager *DBManager) GetDB(dbName string) (*Database, error) {
     dbPath := path.Join(dbDir, dbFileName)
 
     if !dbExists {
-        if err = os.Mkdir(dbDir, os.ModePerm); err != nil {
+        if err = os.MkdirAll(dbDir, os.ModePerm); err != nil {
             manager.Logger.Error("Error [%v] creating directory for DB %s", err, dbName)
             return nil, err
         }
