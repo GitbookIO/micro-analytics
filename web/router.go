@@ -36,7 +36,7 @@ func NewRouter(opts RouterOpts) http.Handler {
     geolite2 := opts.Geolite2Reader
 
     // Initiate DB driver
-    sqlite := sqlite.New(opts.DriverOpts)
+    driver := sqlite.New(opts.DriverOpts)
 
     /////
     // Welcome
@@ -105,7 +105,7 @@ func NewRouter(opts RouterOpts) http.Handler {
             URL:       req.URL.String(),
         }
 
-        analytics, err := sqlite.OverTime(params)
+        analytics, err := driver.OverTime(params)
         if err != nil {
             if driverErr, ok := err.(*driverErrors.DriverError); ok {
                 switch driverErr.Code {
@@ -183,7 +183,7 @@ func NewRouter(opts RouterOpts) http.Handler {
             URL:       req.URL.String(),
         }
 
-        analytics, err := sqlite.GroupBy(params)
+        analytics, err := driver.GroupBy(params)
         if err != nil {
             if driverErr, ok := err.(*driverErrors.DriverError); ok {
                 switch driverErr.Code {
@@ -238,7 +238,7 @@ func NewRouter(opts RouterOpts) http.Handler {
             URL:       req.URL.String(),
         }
 
-        analytics, err := sqlite.Query(params)
+        analytics, err := driver.Query(params)
         if err != nil {
             if driverErr, ok := err.(*driverErrors.DriverError); ok {
                 switch driverErr.Code {
@@ -310,7 +310,7 @@ func NewRouter(opts RouterOpts) http.Handler {
             DBName: dbName,
         }
 
-        err = sqlite.Push(params, analytic)
+        err = driver.Push(params, analytic)
         if err != nil {
             if _, ok := err.(*driverErrors.DriverError); ok {
                 renderError(w, &errors.InsertFailed)
@@ -362,7 +362,7 @@ func NewRouter(opts RouterOpts) http.Handler {
             DBName: dbName,
         }
 
-        err = sqlite.Push(params, analytic)
+        err = driver.Push(params, analytic)
         if err != nil {
             if _, ok := err.(*driverErrors.DriverError); ok {
                 renderError(w, &errors.InsertFailed)
@@ -393,7 +393,7 @@ func NewRouter(opts RouterOpts) http.Handler {
             DBName: dbName,
         }
 
-        err := sqlite.Delete(params)
+        err := driver.Delete(params)
         if err != nil {
             if driverErr, ok := err.(*driverErrors.DriverError); ok {
                 switch driverErr.Code {
