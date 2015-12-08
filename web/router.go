@@ -19,6 +19,7 @@ import (
     "github.com/GitbookIO/micro-analytics/utils"
     "github.com/GitbookIO/micro-analytics/utils/geoip"
     "github.com/GitbookIO/micro-analytics/web/errors"
+    . "github.com/GitbookIO/micro-analytics/web/structures"
 )
 
 type RouterOpts struct {
