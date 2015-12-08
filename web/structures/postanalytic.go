@@ -1,4 +1,4 @@
-package web
+package structures
 
 type PostAnalytic struct {
 	Time          int    `json:"time"`

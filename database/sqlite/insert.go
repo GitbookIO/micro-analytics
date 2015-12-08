@@ -1,9 +1,11 @@
-package database
+package sqlite
 
 import (
     sq "github.com/Masterminds/squirrel"
     "github.com/azer/logger"
     _ "github.com/mattn/go-sqlite3"
+
+    . "github.com/GitbookIO/micro-analytics/database/structures"
 )
 
 // Wrapper for inserting through a Database struct
