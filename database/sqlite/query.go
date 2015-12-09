@@ -12,6 +12,9 @@ import (
 
 // Wrapper for querying a Database struct
 func (db *Database) Query(timeRange *TimeRange) (*Analytics, error) {
+    db.Lock()
+    defer db.Unlock()
+
     var log = logger.New("[Database.Query]")
 
     // Query
@@ -66,6 +69,9 @@ func (db *Database) Query(timeRange *TimeRange) (*Analytics, error) {
 
 // Wrapper for querying a Database struct grouped by a property
 func (db *Database) GroupBy(property string, timeRange *TimeRange) (*Aggregates, error) {
+    db.Lock()
+    defer db.Unlock()
+
     var log = logger.New("[Database.GroupBy]")
 
     // Query
@@ -120,6 +126,9 @@ func (db *Database) GroupBy(property string, timeRange *TimeRange) (*Aggregates,
 
 // Wrapper for querying a Database struct grouped by a property
 func (db *Database) GroupByUniq(property string, timeRange *TimeRange) (*Aggregates, error) {
+    db.Lock()
+    defer db.Unlock()
+
     var log = logger.New("[Database.GroupByUniq]")
 
     // Subquery for counting unique IPs
@@ -206,6 +215,9 @@ func (db *Database) GroupByUniq(property string, timeRange *TimeRange) (*Aggrega
 
 // Wrapper for querying a Database struct over a time interval
 func (db *Database) OverTime(interval int, timeRange *TimeRange) (*Intervals, error) {
+    db.Lock()
+    defer db.Unlock()
+
     var log = logger.New("[Database.OverTime]")
 
     // Query
@@ -260,6 +272,9 @@ func (db *Database) OverTime(interval int, timeRange *TimeRange) (*Intervals, er
 
 // Wrapper for querying a Database struct over a time interval
 func (db *Database) OverTimeUniq(interval int, timeRange *TimeRange) (*Intervals, error) {
+    db.Lock()
+    defer db.Unlock()
+
     var log = logger.New("[Database.OverTimeUniq]")
 
     // Subquery for counting unique IPs
@@ -342,6 +357,9 @@ func (db *Database) OverTimeUniq(interval int, timeRange *TimeRange) (*Intervals
 
 // Wrapper for querying a Database struct grouped by a property for which IP is unique
 func (db *Database) CountUniqueWhere(property string, value string, timeRange *TimeRange) (int, error) {
+    db.Lock()
+    defer db.Unlock()
+
     var log = logger.New("[Database.CountUniqueWhere]")
 
     // Query
