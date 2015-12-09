@@ -3,17 +3,17 @@ package sqlite
 import (
 	"database/sql"
 	"path"
+	"sync"
 	"time"
 )
 
 const dbFileName = "analytics.db"
 
 type Database struct {
+	sync.Mutex
 	Path      DBPath
 	Conn      *sql.DB
 	StartTime time.Time
-	Freed     chan bool
-	Pending   int
 }
 
 type DBPath struct {

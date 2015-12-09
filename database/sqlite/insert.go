@@ -10,6 +10,9 @@ import (
 
 // Wrapper for inserting through a Database struct
 func (db *Database) Insert(analytic Analytic) error {
+    db.Lock()
+    defer db.Unlock()
+
     var log = logger.New("[Database.Insert]")
 
     insertQuery := sq.

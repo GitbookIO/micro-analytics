@@ -4,6 +4,7 @@ import (
     "database/sql"
     "errors"
     "os"
+    "sync"
     "time"
 
     "github.com/azer/logger"
@@ -17,33 +18,13 @@ type ManagerOpts struct {
     database.DriverOpts
 }
 
-type UnlockChannel struct {
-    dbPath  DBPath
-    removed bool
-}
-
 type DBManager struct {
+    sync.Mutex
     DBs       map[string]*Database
     StartTime time.Time
     maxDBs    int
-    RequestDB chan DBPath
-    UnlockDB  chan UnlockChannel
-    SendDB    chan *Database
     Cache     *lru.Cache
     Logger    *logger.Logger
-}
-
-// Generate an unlockChannel
-func NewUnlock(dbPath DBPath, removedOpt ...bool) UnlockChannel {
-    removed := false
-    if len(removedOpt) > 0 {
-        removed = removedOpt[0]
-    }
-
-    return UnlockChannel{
-        dbPath:  dbPath,
-        removed: removed,
-    }
 }
 
 // Get a new DBManager
@@ -52,9 +33,6 @@ func NewManager(opts ManagerOpts) *DBManager {
         DBs:       map[string]*Database{},
         StartTime: time.Now(),
         maxDBs:    opts.MaxDBs,
-        RequestDB: make(chan DBPath),
-        UnlockDB:  make(chan UnlockChannel),
-        SendDB:    make(chan *Database),
         Logger:    logger.New("[DBManager]"),
     }
 
@@ -79,33 +57,12 @@ func NewManager(opts ManagerOpts) *DBManager {
             for nbActive > manager.maxDBs && err == nil && count < 15 {
                 count += 1
                 manager.Logger.Info("Cleaning alive connections: %v / %v available", nbActive, manager.maxDBs)
-                nbActive = len(manager.DBs)
                 err = manager.RemoveUnpending()
+                nbActive = len(manager.DBs)
             }
-        }
-    }()
 
-    // Handle registering DBs
-    go func() {
-        for {
-            dbPath := <-manager.RequestDB
-            db, err := manager.GetDB(dbPath)
             if err != nil {
-                manager.Logger.Error("Impossible to get DB %s: Error [%v]", dbPath.FileName(), err)
-            }
-            manager.SendDB <- db
-        }
-    }()
-
-    // Handle unlocking DBs
-    go func() {
-        for {
-            unlock := <-manager.UnlockDB
-            dbName := unlock.dbPath.String()
-
-            if !unlock.removed {
-                manager.DBs[dbName].Pending -= 1
-                manager.DBs[dbName].Freed <- true
+                manager.Logger.Info("%v", err)
             }
         }
     }()
@@ -129,34 +86,29 @@ func (manager *DBManager) Register(db *Database) {
 // Fully remove a DB from manager
 func (manager *DBManager) Unregister(dbPath DBPath) {
     // Test that DB was registered
-    if _, ok := manager.DBs[dbPath.String()]; ok {
+    if db, ok := manager.DBs[dbPath.String()]; ok {
         // Lock DB
-        manager.Logger.Info("Sending request for DB %s", dbPath)
-        manager.RequestDB <- dbPath
-        manager.Logger.Info("Waiting for DB %s", dbPath)
-        db := <-manager.SendDB
+        db.Lock()
+        defer db.Unlock()
 
         // Close DB
         db.Conn.Close()
 
-        // Unlock DB
-        unlock := NewUnlock(dbPath, true)
-        manager.Logger.Info("Unlocking for DB %s", dbPath)
-        manager.UnlockDB <- unlock
-        manager.Logger.Info("Unlocked DB %s", dbPath)
-
         // Unregister DB
-        delete(manager.DBs, dbPath.String())
+        delete(manager.DBs, db.Path.String())
     }
 }
 
 // Detach the longest opened DB from manager
 func (manager *DBManager) RemoveUnpending() error {
+    manager.Lock()
+    defer manager.Unlock()
+
     var toDelete string
     minTime := time.Now()
 
     for dbName, db := range manager.DBs {
-        if db.Pending == 0 && db.StartTime.Before(minTime) {
+        if db.StartTime.Before(minTime) {
             toDelete = dbName
             minTime = db.StartTime
         }
@@ -172,6 +124,9 @@ func (manager *DBManager) RemoveUnpending() error {
 
 // Unregister all attached DBs
 func (manager *DBManager) Purge() {
+    manager.Lock()
+    defer manager.Unlock()
+
     for _, db := range manager.DBs {
         manager.Unregister(db.Path)
     }
@@ -179,13 +134,13 @@ func (manager *DBManager) Purge() {
 
 // Get a DB from manager, register and create if necessary
 func (manager *DBManager) GetDB(dbPath DBPath) (*Database, error) {
+    manager.Lock()
+    defer manager.Unlock()
+
     dbName := dbPath.String()
 
     // Return DB if already registered
     if db, ok := manager.DBs[dbName]; ok {
-        db.Pending += 1
-        // Wait for DB to return from last query
-        <-db.Freed
         return db, nil
     }
 
@@ -194,8 +149,6 @@ func (manager *DBManager) GetDB(dbPath DBPath) (*Database, error) {
         Path:      dbPath,
         Conn:      nil,
         StartTime: time.Now(),
-        Freed:     make(chan bool, 1),
-        Pending:   1,
     }
 
     manager.Register(&database)
@@ -248,6 +201,9 @@ func (manager *DBManager) DBExists(dbPath DBPath) (bool, error) {
 
 // Fully delete a DB on disk system
 func (manager *DBManager) DeleteDB(dbPath DBPath) error {
+    manager.Lock()
+    defer manager.Unlock()
+
     // Unregister from manager
     manager.Unregister(dbPath)
 

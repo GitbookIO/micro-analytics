@@ -38,17 +38,19 @@ func (driver *SQLite) Query(params structures.Params) (*structures.Analytics, er
 	}
 
 	// Get DB from manager
-	driver.DBManager.RequestDB <- dbPath
-	db := <-driver.DBManager.SendDB
+	db, err := driver.DBManager.GetDB(dbPath)
+	if err != nil {
+		return nil, &errors.InternalError
+	}
 
 	// If value is in Cache, return directly
-	cached, inCache := driver.DBManager.Cache.Get(params.URL)
-	if inCache {
-		if response, ok := cached.(*structures.Analytics); ok {
-			driver.DBManager.UnlockDB <- NewUnlock(dbPath)
-			return response, nil
-		}
-	}
+	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
+	// if inCache {
+	// 	if response, ok := cached.(*structures.Analytics); ok {
+	// 		driver.DBManager.UnlockDB <- NewUnlock(dbPath)
+	// 		return response, nil
+	// 	}
+	// }
 
 	// Return query result
 	analytics, err := db.Query(params.TimeRange)
@@ -56,11 +58,8 @@ func (driver *SQLite) Query(params structures.Params) (*structures.Analytics, er
 		return nil, &errors.InternalError
 	}
 
-	// Unlock DB
-	driver.DBManager.UnlockDB <- NewUnlock(dbPath)
-
 	// Store response in Cache before sending
-	driver.DBManager.Cache.Add(params.URL, analytics)
+	// driver.DBManager.Cache.Add(params.URL, analytics)
 
 	return analytics, nil
 }
@@ -84,17 +83,19 @@ func (driver *SQLite) GroupBy(params structures.Params) (*structures.Aggregates,
 	}
 
 	// Get DB from manager
-	driver.DBManager.RequestDB <- dbPath
-	db := <-driver.DBManager.SendDB
+	db, err := driver.DBManager.GetDB(dbPath)
+	if err != nil {
+		return nil, &errors.InternalError
+	}
 
 	// If value is in Cache, return directly
-	cached, inCache := driver.DBManager.Cache.Get(params.URL)
-	if inCache {
-		if response, ok := cached.(*structures.Aggregates); ok {
-			driver.DBManager.UnlockDB <- NewUnlock(dbPath)
-			return response, nil
-		}
-	}
+	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
+	// if inCache {
+	// 	if response, ok := cached.(*structures.Aggregates); ok {
+	// 		driver.DBManager.UnlockDB <- NewUnlock(dbPath)
+	// 		return response, nil
+	// 	}
+	// }
 
 	// Check for unique query parameter to call function accordingly
 	var analytics *structures.Aggregates
@@ -111,11 +112,8 @@ func (driver *SQLite) GroupBy(params structures.Params) (*structures.Aggregates,
 		}
 	}
 
-	// Unlock DB
-	driver.DBManager.UnlockDB <- NewUnlock(dbPath)
-
 	// Store response in Cache before sending
-	driver.DBManager.Cache.Add(params.URL, analytics)
+	// driver.DBManager.Cache.Add(params.URL, analytics)
 
 	return analytics, nil
 }
@@ -139,17 +137,19 @@ func (driver *SQLite) OverTime(params structures.Params) (*structures.Intervals,
 	}
 
 	// Get DB from manager
-	driver.DBManager.RequestDB <- dbPath
-	db := <-driver.DBManager.SendDB
+	db, err := driver.DBManager.GetDB(dbPath)
+	if err != nil {
+		return nil, &errors.InternalError
+	}
 
 	// If value is in Cache, return directly
-	cached, inCache := driver.DBManager.Cache.Get(params.URL)
-	if inCache {
-		if response, ok := cached.(*structures.Intervals); ok {
-			driver.DBManager.UnlockDB <- NewUnlock(dbPath)
-			return response, nil
-		}
-	}
+	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
+	// if inCache {
+	// 	if response, ok := cached.(*structures.Intervals); ok {
+	// 		driver.DBManager.UnlockDB <- NewUnlock(dbPath)
+	// 		return response, nil
+	// 	}
+	// }
 
 	// Check for unique query parameter to call function accordingly
 	var analytics *structures.Intervals
@@ -166,11 +166,8 @@ func (driver *SQLite) OverTime(params structures.Params) (*structures.Intervals,
 		}
 	}
 
-	// Unlock DB
-	driver.DBManager.UnlockDB <- NewUnlock(dbPath)
-
 	// Store response in Cache before sending
-	driver.DBManager.Cache.Add(params.URL, analytics)
+	// driver.DBManager.Cache.Add(params.URL, analytics)
 
 	return analytics, nil
 }
@@ -183,14 +180,13 @@ func (driver *SQLite) Push(params structures.Params, analytic structures.Analyti
 	}
 
 	// Get DB from manager
-	driver.DBManager.RequestDB <- dbPath
-	db := <-driver.DBManager.SendDB
+	db, err := driver.DBManager.GetDB(dbPath)
+	if err != nil {
+		return &errors.InternalError
+	}
 
 	// Insert data if everything's OK
-	err := db.Insert(analytic)
-
-	// Unlock DB
-	driver.DBManager.UnlockDB <- NewUnlock(dbPath)
+	err = db.Insert(analytic)
 
 	if err != nil {
 		return &errors.InsertFailed

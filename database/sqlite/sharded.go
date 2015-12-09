@@ -69,17 +69,16 @@ func (driver *Sharded) Query(params structures.Params) (*structures.Analytics, e
 		}
 
 		// Get DB shard from manager
-		driver.DBManager.RequestDB <- shardPath
-		db := <-driver.DBManager.SendDB
+		db, err := driver.DBManager.GetDB(shardPath)
+		if err != nil {
+			return nil, &errors.InternalError
+		}
 
 		// Return query result
 		shardAnalytics, err := db.Query(params.TimeRange)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
-
-		// Unlock DB
-		driver.DBManager.UnlockDB <- NewUnlock(shardPath)
 
 		// Add shard result to analytics
 		for _, analytic := range shardAnalytics.List {
@@ -149,8 +148,10 @@ func (driver *Sharded) GroupBy(params structures.Params) (*structures.Aggregates
 		}
 
 		// Get DB shard from manager
-		driver.DBManager.RequestDB <- shardPath
-		db := <-driver.DBManager.SendDB
+		db, err := driver.DBManager.GetDB(shardPath)
+		if err != nil {
+			return nil, &errors.InternalError
+		}
 
 		var shardAnalytics *structures.Aggregates
 
@@ -166,9 +167,6 @@ func (driver *Sharded) GroupBy(params structures.Params) (*structures.Aggregates
 				return nil, &errors.InternalError
 			}
 		}
-
-		// Unlock DB
-		driver.DBManager.UnlockDB <- NewUnlock(shardPath)
 
 		// Add shard result to analyticsMap
 		for _, analytic := range shardAnalytics.List {
@@ -247,8 +245,10 @@ func (driver *Sharded) OverTime(params structures.Params) (*structures.Intervals
 		}
 
 		// Get DB shard from manager
-		driver.DBManager.RequestDB <- shardPath
-		db := <-driver.DBManager.SendDB
+		db, err := driver.DBManager.GetDB(shardPath)
+		if err != nil {
+			return nil, &errors.InternalError
+		}
 
 		var shardAnalytics *structures.Intervals
 
@@ -264,9 +264,6 @@ func (driver *Sharded) OverTime(params structures.Params) (*structures.Intervals
 				return nil, &errors.InternalError
 			}
 		}
-
-		// Unlock DB
-		driver.DBManager.UnlockDB <- NewUnlock(shardPath)
 
 		// Add shard result to analyticsMap
 		for _, analytic := range shardAnalytics.List {
@@ -306,14 +303,15 @@ func (driver *Sharded) Push(params structures.Params, analytic structures.Analyt
 	}
 
 	// Get DB from manager
-	driver.DBManager.RequestDB <- shardPath
-	db := <-driver.DBManager.SendDB
+	driver.logger.Info("Request for DB %s", shardPath)
+	db, err := driver.DBManager.GetDB(shardPath)
+	if err != nil {
+		return &errors.InternalError
+	}
 
+	driver.logger.Info("Inserting in DB %s", shardPath)
 	// Insert data if everything's OK
-	err := db.Insert(analytic)
-
-	// Unlock DB
-	driver.DBManager.UnlockDB <- NewUnlock(shardPath)
+	err = db.Insert(analytic)
 
 	if err != nil {
 		return &errors.InsertFailed

@@ -410,6 +410,12 @@ func NewRouter(opts RouterOpts) http.Handler {
                 CountryCode:   postData.CountryCode,
             }
 
+            // Get countryCode from GeoIp
+            analytic.CountryCode, err = geoip.GeoIpLookup(geolite2, postData.Ip)
+            if err != nil {
+                log.Error("Error [%v] looking for countryCode for IP %s", postData.Ip)
+            }
+
             // Construct Params object
             params := structures.Params{
                 DBName: dbName,
