@@ -33,14 +33,14 @@ func (db *Database) Query(timeRange *TimeRange) (*Analytics, error) {
 
     query, _, err := queryBuilder.ToSql()
     if err != nil {
-        log.Error("Error [%v] building query for DB %s", err, db.Name)
+        log.Error("Error [%v] building query for DB %s", err, db.Name())
         return nil, err
     }
 
     // Exec query
     rows, err := db.Conn.Query(query)
     if err != nil {
-        log.Error("Error [%v] querying DB %s", err, db.Name)
+        log.Error("Error [%v] querying DB %s", err, db.Name())
         return nil, err
     }
     defer rows.Close()
@@ -88,14 +88,14 @@ func (db *Database) GroupBy(property string, timeRange *TimeRange) (*Aggregates,
     // Set query Group By condition
     query, _, err := queryBuilder.GroupBy(property).ToSql()
     if err != nil {
-        log.Error("Error [%v] building query for DB %s", err, db.Name)
+        log.Error("Error [%v] building query for DB %s", err, db.Name())
         return nil, err
     }
 
     // Exec query
     rows, err := db.Conn.Query(query)
     if err != nil {
-        log.Error("Error [%v] querying DB %s", err, db.Name)
+        log.Error("Error [%v] querying DB %s", err, db.Name())
         return nil, err
     }
     defer rows.Close()
@@ -142,7 +142,7 @@ func (db *Database) GroupByUniq(property string, timeRange *TimeRange) (*Aggrega
     // Format subquery
     subquery, _, err := subqueryBuilder.GroupBy(property).ToSql()
     if err != nil {
-        log.Error("Error [%v] building subquery for DB %s", err, db.Name)
+        log.Error("Error [%v] building subquery for DB %s", err, db.Name())
         return nil, err
     }
 
@@ -173,14 +173,14 @@ func (db *Database) GroupByUniq(property string, timeRange *TimeRange) (*Aggrega
     // Format query
     query, _, err := queryBuilder.GroupBy(tableProperty).ToSql()
     if err != nil {
-        log.Error("Error [%v] building query for DB %s", err, db.Name)
+        log.Error("Error [%v] building query for DB %s", err, db.Name())
         return nil, err
     }
 
     // Exec query
     rows, err := db.Conn.Query(query)
     if err != nil {
-        log.Error("Error [%v] querying DB %s", err, db.Name)
+        log.Error("Error [%v] querying DB %s", err, db.Name())
         return nil, err
     }
     defer rows.Close()
@@ -228,14 +228,14 @@ func (db *Database) OverTime(interval int, timeRange *TimeRange) (*Intervals, er
     // Set query Group By condition
     query, _, err := queryBuilder.GroupBy("startTime").ToSql()
     if err != nil {
-        log.Error("Error [%v] building query for DB %s", err, db.Name)
+        log.Error("Error [%v] building query for DB %s", err, db.Name())
         return nil, err
     }
 
     // Exec query
     rows, err := db.Conn.Query(query)
     if err != nil {
-        log.Error("Error [%v] querying DB %s", err, db.Name)
+        log.Error("Error [%v] querying DB %s", err, db.Name())
         return nil, err
     }
     defer rows.Close()
@@ -282,7 +282,7 @@ func (db *Database) OverTimeUniq(interval int, timeRange *TimeRange) (*Intervals
     // Format subquery
     subquery, _, err := subqueryBuilder.GroupBy("sqStartTime").ToSql()
     if err != nil {
-        log.Error("Error [%v] building subquery for DB %s", err, db.Name)
+        log.Error("Error [%v] building subquery for DB %s", err, db.Name())
         return nil, err
     }
 
@@ -310,14 +310,14 @@ func (db *Database) OverTimeUniq(interval int, timeRange *TimeRange) (*Intervals
     // Set query Group By condition
     query, _, err := queryBuilder.GroupBy("startTime").ToSql()
     if err != nil {
-        log.Error("Error [%v] building query for DB %s", err, db.Name)
+        log.Error("Error [%v] building query for DB %s", err, db.Name())
         return nil, err
     }
 
     // Exec query
     rows, err := db.Conn.Query(query)
     if err != nil {
-        log.Error("Error [%v] querying DB %s", err, db.Name)
+        log.Error("Error [%v] querying DB %s", err, db.Name())
         return nil, err
     }
     defer rows.Close()
@@ -367,14 +367,14 @@ func (db *Database) CountUniqueWhere(property string, value string, timeRange *T
     // Set query Group By condition
     query, _, err := queryBuilder.GroupBy(property).ToSql()
     if err != nil {
-        log.Error("Error [%v] building query for DB %s", err, db.Name)
+        log.Error("Error [%v] building query for DB %s", err, db.Name())
         return 0, err
     }
 
     // Exec query
     rows, err := db.Conn.Query(query)
     if err != nil {
-        log.Error("Error [%v] querying DB %s", err, db.Name)
+        log.Error("Error [%v] querying DB %s", err, db.Name())
         return 0, err
     }
     defer rows.Close()

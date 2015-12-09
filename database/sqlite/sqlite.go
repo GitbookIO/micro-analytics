@@ -8,18 +8,26 @@ import (
 
 type SQLite struct {
 	DBManager *DBManager
+	directory string
 }
 
-func New(driverOpts database.DriverOpts) *SQLite {
+func NewSimpleDriver(driverOpts database.DriverOpts) *SQLite {
 	manager := NewManager(ManagerOpts{driverOpts})
 	return &SQLite{
 		DBManager: manager,
+		directory: driverOpts.Directory,
 	}
 }
 
 func (driver *SQLite) Query(params structures.Params) (*structures.Analytics, error) {
+	// Construct DBPath
+	dbPath := DBPath{
+		Name:      params.DBName,
+		Directory: driver.directory,
+	}
+
 	// Check if DB file exists
-	dbExists, err := driver.DBManager.DBExists(params.DBName)
+	dbExists, err := driver.DBManager.DBExists(dbPath)
 	if err != nil {
 		return nil, &errors.InternalError
 	}
@@ -30,14 +38,14 @@ func (driver *SQLite) Query(params structures.Params) (*structures.Analytics, er
 	}
 
 	// Get DB from manager
-	driver.DBManager.RequestDB <- params.DBName
+	driver.DBManager.RequestDB <- dbPath
 	db := <-driver.DBManager.SendDB
 
 	// If value is in Cache, return directly
 	cached, inCache := driver.DBManager.Cache.Get(params.URL)
 	if inCache {
 		if response, ok := cached.(*structures.Analytics); ok {
-			driver.DBManager.UnlockDB <- params.DBName
+			driver.DBManager.UnlockDB <- NewUnlock(dbPath)
 			return response, nil
 		}
 	}
@@ -49,7 +57,7 @@ func (driver *SQLite) Query(params structures.Params) (*structures.Analytics, er
 	}
 
 	// Unlock DB
-	driver.DBManager.UnlockDB <- params.DBName
+	driver.DBManager.UnlockDB <- NewUnlock(dbPath)
 
 	// Store response in Cache before sending
 	driver.DBManager.Cache.Add(params.URL, analytics)
@@ -58,8 +66,14 @@ func (driver *SQLite) Query(params structures.Params) (*structures.Analytics, er
 }
 
 func (driver *SQLite) GroupBy(params structures.Params) (*structures.Aggregates, error) {
+	// Construct DBPath
+	dbPath := DBPath{
+		Name:      params.DBName,
+		Directory: driver.directory,
+	}
+
 	// Check if DB file exists
-	dbExists, err := driver.DBManager.DBExists(params.DBName)
+	dbExists, err := driver.DBManager.DBExists(dbPath)
 	if err != nil {
 		return nil, &errors.InternalError
 	}
@@ -70,14 +84,14 @@ func (driver *SQLite) GroupBy(params structures.Params) (*structures.Aggregates,
 	}
 
 	// Get DB from manager
-	driver.DBManager.RequestDB <- params.DBName
+	driver.DBManager.RequestDB <- dbPath
 	db := <-driver.DBManager.SendDB
 
 	// If value is in Cache, return directly
 	cached, inCache := driver.DBManager.Cache.Get(params.URL)
 	if inCache {
 		if response, ok := cached.(*structures.Aggregates); ok {
-			driver.DBManager.UnlockDB <- params.DBName
+			driver.DBManager.UnlockDB <- NewUnlock(dbPath)
 			return response, nil
 		}
 	}
@@ -98,7 +112,7 @@ func (driver *SQLite) GroupBy(params structures.Params) (*structures.Aggregates,
 	}
 
 	// Unlock DB
-	driver.DBManager.UnlockDB <- params.DBName
+	driver.DBManager.UnlockDB <- NewUnlock(dbPath)
 
 	// Store response in Cache before sending
 	driver.DBManager.Cache.Add(params.URL, analytics)
@@ -107,8 +121,14 @@ func (driver *SQLite) GroupBy(params structures.Params) (*structures.Aggregates,
 }
 
 func (driver *SQLite) OverTime(params structures.Params) (*structures.Intervals, error) {
+	// Construct DBPath
+	dbPath := DBPath{
+		Name:      params.DBName,
+		Directory: driver.directory,
+	}
+
 	// Check if DB file exists
-	dbExists, err := driver.DBManager.DBExists(params.DBName)
+	dbExists, err := driver.DBManager.DBExists(dbPath)
 	if err != nil {
 		return nil, &errors.InternalError
 	}
@@ -119,14 +139,14 @@ func (driver *SQLite) OverTime(params structures.Params) (*structures.Intervals,
 	}
 
 	// Get DB from manager
-	driver.DBManager.RequestDB <- params.DBName
+	driver.DBManager.RequestDB <- dbPath
 	db := <-driver.DBManager.SendDB
 
 	// If value is in Cache, return directly
 	cached, inCache := driver.DBManager.Cache.Get(params.URL)
 	if inCache {
 		if response, ok := cached.(*structures.Intervals); ok {
-			driver.DBManager.UnlockDB <- params.DBName
+			driver.DBManager.UnlockDB <- NewUnlock(dbPath)
 			return response, nil
 		}
 	}
@@ -147,7 +167,7 @@ func (driver *SQLite) OverTime(params structures.Params) (*structures.Intervals,
 	}
 
 	// Unlock DB
-	driver.DBManager.UnlockDB <- params.DBName
+	driver.DBManager.UnlockDB <- NewUnlock(dbPath)
 
 	// Store response in Cache before sending
 	driver.DBManager.Cache.Add(params.URL, analytics)
@@ -156,15 +176,21 @@ func (driver *SQLite) OverTime(params structures.Params) (*structures.Intervals,
 }
 
 func (driver *SQLite) Push(params structures.Params, analytic structures.Analytic) error {
+	// Construct DBPath
+	dbPath := DBPath{
+		Name:      params.DBName,
+		Directory: driver.directory,
+	}
+
 	// Get DB from manager
-	driver.DBManager.RequestDB <- params.DBName
+	driver.DBManager.RequestDB <- dbPath
 	db := <-driver.DBManager.SendDB
 
 	// Insert data if everything's OK
 	err := db.Insert(analytic)
 
 	// Unlock DB
-	driver.DBManager.UnlockDB <- params.DBName
+	driver.DBManager.UnlockDB <- NewUnlock(dbPath)
 
 	if err != nil {
 		return &errors.InsertFailed
@@ -174,8 +200,14 @@ func (driver *SQLite) Push(params structures.Params, analytic structures.Analyti
 }
 
 func (driver *SQLite) Delete(params structures.Params) error {
+	// Construct DBPath
+	dbPath := DBPath{
+		Name:      params.DBName,
+		Directory: driver.directory,
+	}
+
 	// Check if DB file exists
-	dbExists, err := driver.DBManager.DBExists(params.DBName)
+	dbExists, err := driver.DBManager.DBExists(dbPath)
 	if err != nil {
 		return &errors.InternalError
 	}
@@ -186,6 +218,6 @@ func (driver *SQLite) Delete(params structures.Params) error {
 	}
 
 	// Delete full DB directory
-	err = driver.DBManager.DeleteDB(params.DBName)
+	err = driver.DBManager.DeleteDB(dbPath)
 	return err
 }

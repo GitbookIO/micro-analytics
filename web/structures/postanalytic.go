@@ -9,3 +9,7 @@ type PostAnalytic struct {
 	RefererDomain string `json:"refererDomain"`
 	CountryCode   string `json:"countryCode"`
 }
+
+type PostAnalytics struct {
+	List []PostAnalytic `json:"list"`
+}

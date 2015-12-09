@@ -2,6 +2,8 @@ package sqlite
 
 import (
     "database/sql"
+    "io/ioutil"
+
     "github.com/azer/logger"
 )
 
@@ -27,4 +29,18 @@ func TableExists(db *sql.DB) bool {
     }
 
     return count == 1
+}
+
+func ListShards(dbPath DBPath) []string {
+    folders, err := ioutil.ReadDir(dbPath.String())
+    if err != nil {
+        return nil
+    }
+
+    shards := make([]string, 0)
+    for _, folder := range folders {
+        shards = append(shards, folder.Name())
+    }
+
+    return shards
 }

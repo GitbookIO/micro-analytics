@@ -2,6 +2,7 @@ package structures
 
 import (
     "errors"
+    "strconv"
     "time"
 )
 
@@ -55,4 +56,33 @@ func NewTimeRange(start string, end string) (*TimeRange, error) {
     }
 
     return &timeRange, nil
+}
+
+// Helper function to return start and end time as an int in YYYYMM format
+// Defaults to 0 for Start and 999999 for End
+func (timeRange *TimeRange) ConvertToInt() (int, int) {
+    var err error
+    layout := "200601"
+
+    startDefault := 0
+    startInt := 0
+    endDefault := 999999
+    endInt := 999999
+
+    if timeRange != nil {
+        if !timeRange.Start.Equal(time.Time{}) {
+            startInt, err = strconv.Atoi(timeRange.Start.Format(layout))
+            if err != nil {
+                startInt = startDefault
+            }
+        }
+        if !timeRange.End.Equal(time.Time{}) {
+            endInt, err = strconv.Atoi(timeRange.End.Format(layout))
+            if err != nil {
+                endInt = endDefault
+            }
+        }
+    }
+
+    return startInt, endInt
 }
