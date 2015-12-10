@@ -57,7 +57,7 @@ func NewManager(opts ManagerOpts) *DBManager {
 			for nbActive > manager.maxDBs && err == nil && count < 15 {
 				count += 1
 				manager.Logger.Info("Cleaning alive connections: %v / %v available", nbActive, manager.maxDBs)
-				err = manager.RemoveUnpending()
+				err = manager.removeUnpending()
 				nbActive = len(manager.DBs)
 			}
 
@@ -70,66 +70,11 @@ func NewManager(opts ManagerOpts) *DBManager {
 	// Handle closing connections when app is killed
 	go func() {
 		<-opts.ClosingChannel
-		manager.Purge()
+		manager.purge()
 		opts.ClosingChannel <- true
 	}()
 
 	return &manager
-}
-
-// Attach a new DB to the manager
-func (manager *DBManager) Register(db *Database) {
-	dbName := db.Path.String()
-	manager.DBs[dbName] = db
-}
-
-// Fully remove a DB from manager
-func (manager *DBManager) Unregister(dbPath DBPath) {
-	// Test that DB was registered
-	if db, ok := manager.DBs[dbPath.String()]; ok {
-		// Lock DB
-		db.Lock()
-		defer db.Unlock()
-
-		// Close DB
-		db.Conn.Close()
-
-		// Unregister DB
-		delete(manager.DBs, db.Path.String())
-	}
-}
-
-// Detach the longest opened DB from manager
-func (manager *DBManager) RemoveUnpending() error {
-	manager.Lock()
-	defer manager.Unlock()
-
-	var toDelete string
-	minTime := time.Now()
-
-	for dbName, db := range manager.DBs {
-		if db.StartTime.Before(minTime) {
-			toDelete = dbName
-			minTime = db.StartTime
-		}
-	}
-
-	if len(toDelete) == 0 {
-		return errors.New("All registered DBs are busy at this time")
-	}
-
-	manager.Unregister(manager.DBs[toDelete].Path)
-	return nil
-}
-
-// Unregister all attached DBs
-func (manager *DBManager) Purge() {
-	manager.Lock()
-	defer manager.Unlock()
-
-	for _, db := range manager.DBs {
-		manager.Unregister(db.Path)
-	}
 }
 
 // Get a DB from manager, register and create if necessary
@@ -154,9 +99,88 @@ func (manager *DBManager) GetDB(dbPath DBPath) (*Database, error) {
 		Conn:      conn,
 		StartTime: time.Now(),
 	}
-	manager.Register(&database)
+	manager.register(&database)
 
 	return &database, nil
+}
+
+// Check if the DB folder exists physically
+func (manager *DBManager) DBExists(dbPath DBPath) (bool, error) {
+	dbExists, err := utils.PathExists(dbPath.String())
+	if err != nil {
+		// Error reading file
+		manager.Logger.Error("Error [%v] trying to reach file '%s'", err, dbPath.FileName())
+		return false, err
+	}
+
+	return dbExists, nil
+}
+
+// Fully delete a DB on disk system
+func (manager *DBManager) DeleteDB(dbPath DBPath) error {
+	manager.Lock()
+	defer manager.Unlock()
+
+	// Unregister from manager
+	manager.unregister(dbPath)
+
+	// Then delete
+	return os.RemoveAll(dbPath.String())
+}
+
+// Attach a new DB to the manager
+func (manager *DBManager) register(db *Database) {
+	dbName := db.Path.String()
+	manager.DBs[dbName] = db
+}
+
+// Fully remove a DB from manager
+func (manager *DBManager) unregister(dbPath DBPath) {
+	// Test that DB was registered
+	if db, ok := manager.DBs[dbPath.String()]; ok {
+		// Lock DB
+		db.Lock()
+		defer db.Unlock()
+
+		// Close DB
+		db.Conn.Close()
+
+		// Unregister DB
+		delete(manager.DBs, db.Path.String())
+	}
+}
+
+// Unregister all attached DBs
+func (manager *DBManager) purge() {
+	manager.Lock()
+	defer manager.Unlock()
+
+	for _, db := range manager.DBs {
+		manager.unregister(db.Path)
+	}
+}
+
+// Detach the longest opened DB from manager
+func (manager *DBManager) removeUnpending() error {
+	manager.Lock()
+	defer manager.Unlock()
+
+	var toDelete string
+	minTime := time.Now()
+
+	for dbName, db := range manager.DBs {
+		if db.StartTime.Before(minTime) {
+			toDelete = dbName
+			minTime = db.StartTime
+		}
+	}
+
+	if len(toDelete) == 0 {
+		return errors.New("All registered DBs are busy at this time")
+	}
+
+	manager.unregister(manager.DBs[toDelete].Path)
+	return nil
 }
 
 func (manager *DBManager) openOrCreate(dbPath DBPath) (*sql.DB, error) {
@@ -191,28 +215,4 @@ func (manager *DBManager) createDB(dbPath DBPath) (*sql.DB, error) {
 	}
 
 	return conn, nil
-}
-
-// Check if the DB folder exists physically
-func (manager *DBManager) DBExists(dbPath DBPath) (bool, error) {
-	dbExists, err := utils.PathExists(dbPath.String())
-	if err != nil {
-		// Error reading file
-		manager.Logger.Error("Error [%v] trying to reach file '%s'", err, dbPath.FileName())
-		return false, err
-	}
-
-	return dbExists, nil
-}
-
-// Fully delete a DB on disk system
-func (manager *DBManager) DeleteDB(dbPath DBPath) error {
-	manager.Lock()
-	defer manager.Unlock()
-
-	// Unregister from manager
-	manager.Unregister(dbPath)
-
-	// Then delete
-	return os.RemoveAll(dbPath.String())
 }
