@@ -137,54 +137,60 @@ func (manager *DBManager) GetDB(dbPath DBPath) (*Database, error) {
 	manager.Lock()
 	defer manager.Unlock()
 
-	dbName := dbPath.String()
-
 	// Return DB if already registered
-	if db, ok := manager.DBs[dbName]; ok {
+	if db, ok := manager.DBs[dbPath.String()]; ok {
 		return db, nil
+	}
+
+	// Create/open
+	conn, err := manager.openOrCreate(dbPath)
+	if err != nil {
+		return nil, err
 	}
 
 	// Register DB
 	database := Database{
 		Path:      dbPath,
-		Conn:      nil,
+		Conn:      conn,
 		StartTime: time.Now(),
 	}
-
 	manager.Register(&database)
 
-	// Create DB directory if doesn't exist
-	dbExists, err := manager.DBExists(dbPath)
+	return &database, nil
+}
+
+func (manager *DBManager) openOrCreate(dbPath DBPath) (*sql.DB, error) {
+	if exists, err := manager.DBExists(dbPath); err != nil {
+		return nil, err
+	} else if exists {
+		return manager.openDB(dbPath)
+	}
+	return manager.createDB(dbPath)
+}
+
+func (manager *DBManager) openDB(dbPath DBPath) (*sql.DB, error) {
+	conn, err := Open(dbPath.FileName())
 	if err != nil {
-		manager.Logger.Error("Error [%v] checking if DB %s exists", err, dbName)
+		manager.Logger.Error("Error [%v] opening DB %s", err, dbPath)
+		return nil, err
+	}
+	return conn, nil
+}
+
+func (manager *DBManager) createDB(dbPath DBPath) (*sql.DB, error) {
+	if err := os.MkdirAll(dbPath.String(), os.ModePerm); err != nil {
+		manager.Logger.Error("Error [%v] creating directory for DB %s", err, dbPath)
 		return nil, err
 	}
 
-	var conn *sql.DB
-
-	if !dbExists {
-		if err = os.MkdirAll(dbPath.String(), os.ModePerm); err != nil {
-			manager.Logger.Error("Error [%v] creating directory for DB %s", err, dbName)
-			return nil, err
-		}
-
-		// Open DB connection and returns the full Database
-		conn, err = OpenAndInitialize(dbPath.FileName())
-		if err != nil {
-			manager.Logger.Error("Error [%v] opening DB %s", err, dbName)
-			return nil, err
-		}
-	} else {
-		conn, err = Open(dbPath.FileName())
-		if err != nil {
-			manager.Logger.Error("Error [%v] opening DB %s", err, dbName)
-			return nil, err
-		}
+	// Open DB connection and returns the full Database
+	conn, err := OpenAndInitialize(dbPath.FileName())
+	if err != nil {
+		manager.Logger.Error("Error [%v] opening DB %s", err, dbPath)
+		return nil, err
 	}
 
-	database.Conn = conn
-
-	return &database, nil
+	return conn, nil
 }
 
 // Check if the DB folder exists physically
