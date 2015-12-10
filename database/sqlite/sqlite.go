@@ -6,6 +6,7 @@ import (
 	"github.com/GitbookIO/micro-analytics/database/structures"
 
 	"github.com/GitbookIO/micro-analytics/database/sqlite/manager"
+	"github.com/GitbookIO/micro-analytics/database/sqlite/query"
 )
 
 type SQLite struct {
@@ -55,7 +56,7 @@ func (driver *SQLite) Query(params structures.Params) (*structures.Analytics, er
 	// }
 
 	// Return query result
-	analytics, err := db.Query(params.TimeRange)
+	analytics, err := query.Query(db.Conn, params.TimeRange)
 	if err != nil {
 		return nil, &errors.InternalError
 	}
@@ -103,12 +104,12 @@ func (driver *SQLite) GroupBy(params structures.Params) (*structures.Aggregates,
 	var analytics *structures.Aggregates
 
 	if params.Unique {
-		analytics, err = db.GroupByUniq(params.Property, params.TimeRange)
+		analytics, err = query.GroupByUniq(db.Conn, params.Property, params.TimeRange)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
 	} else {
-		analytics, err = db.GroupBy(params.Property, params.TimeRange)
+		analytics, err = query.GroupBy(db.Conn, params.Property, params.TimeRange)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
@@ -157,12 +158,12 @@ func (driver *SQLite) Series(params structures.Params) (*structures.Intervals, e
 	var analytics *structures.Intervals
 
 	if params.Unique {
-		analytics, err = db.OverTimeUniq(params.Interval, params.TimeRange)
+		analytics, err = query.OverTimeUniq(db.Conn, params.Interval, params.TimeRange)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
 	} else {
-		analytics, err = db.OverTime(params.Interval, params.TimeRange)
+		analytics, err = query.OverTime(db.Conn, params.Interval, params.TimeRange)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
@@ -188,7 +189,7 @@ func (driver *SQLite) Insert(params structures.Params, analytic structures.Analy
 	}
 
 	// Insert data if everything's OK
-	err = db.Insert(analytic)
+	err = query.Insert(db.Conn, analytic)
 
 	if err != nil {
 		return &errors.InsertFailed

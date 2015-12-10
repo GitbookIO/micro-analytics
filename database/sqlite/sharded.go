@@ -12,6 +12,7 @@ import (
 	"github.com/GitbookIO/micro-analytics/database/structures"
 
 	"github.com/GitbookIO/micro-analytics/database/sqlite/manager"
+	"github.com/GitbookIO/micro-analytics/database/sqlite/query"
 )
 
 type Sharded struct {
@@ -78,7 +79,7 @@ func (driver *Sharded) Query(params structures.Params) (*structures.Analytics, e
 		}
 
 		// Return query result
-		shardAnalytics, err := db.Query(params.TimeRange)
+		shardAnalytics, err := query.Query(db.Conn, params.TimeRange)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
@@ -160,12 +161,12 @@ func (driver *Sharded) GroupBy(params structures.Params) (*structures.Aggregates
 
 		// Check for unique query parameter to call function accordingly
 		if params.Unique {
-			shardAnalytics, err = db.GroupByUniq(params.Property, params.TimeRange)
+			shardAnalytics, err = query.GroupByUniq(db.Conn, params.Property, params.TimeRange)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
 		} else {
-			shardAnalytics, err = db.GroupBy(params.Property, params.TimeRange)
+			shardAnalytics, err = query.GroupBy(db.Conn, params.Property, params.TimeRange)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
@@ -257,12 +258,12 @@ func (driver *Sharded) Series(params structures.Params) (*structures.Intervals, 
 
 		// Check for unique query parameter to call function accordingly
 		if params.Unique {
-			shardAnalytics, err = db.OverTimeUniq(params.Interval, params.TimeRange)
+			shardAnalytics, err = query.OverTimeUniq(db.Conn, params.Interval, params.TimeRange)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
 		} else {
-			shardAnalytics, err = db.OverTime(params.Interval, params.TimeRange)
+			shardAnalytics, err = query.OverTime(db.Conn, params.Interval, params.TimeRange)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
@@ -314,7 +315,7 @@ func (driver *Sharded) Insert(params structures.Params, analytic structures.Anal
 
 	driver.logger.Info("Inserting in DB %s", shardPath)
 	// Insert data if everything's OK
-	err = db.Insert(analytic)
+	err = query.Insert(db.Conn, analytic)
 
 	if err != nil {
 		return &errors.InsertFailed
