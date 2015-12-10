@@ -8,11 +8,11 @@ type Driver interface {
 	// Return aggregated stats by property
 	GroupBy(params Params) (*Aggregates, error)
 	// Return time serie sliced by a specific interval
-	OverTime(params Params) (*Intervals, error)
+	Series(params Params) (*Intervals, error)
 	// Return all stats
 	Query(params Params) (*Analytics, error)
 	// Handle adding new stats
-	Push(params Params, analytic Analytic) error
+	Insert(params Params, analytic Analytic) error
 	// Handle DB removal
 	Delete(params Params) error
 }

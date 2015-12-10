@@ -118,7 +118,7 @@ func (driver *SQLite) GroupBy(params structures.Params) (*structures.Aggregates,
 	return analytics, nil
 }
 
-func (driver *SQLite) OverTime(params structures.Params) (*structures.Intervals, error) {
+func (driver *SQLite) Series(params structures.Params) (*structures.Intervals, error) {
 	// Construct DBPath
 	dbPath := DBPath{
 		Name:      params.DBName,
@@ -172,7 +172,7 @@ func (driver *SQLite) OverTime(params structures.Params) (*structures.Intervals,
 	return analytics, nil
 }
 
-func (driver *SQLite) Push(params structures.Params, analytic structures.Analytic) error {
+func (driver *SQLite) Insert(params structures.Params, analytic structures.Analytic) error {
 	// Construct DBPath
 	dbPath := DBPath{
 		Name:      params.DBName,

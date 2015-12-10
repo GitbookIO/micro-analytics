@@ -200,7 +200,7 @@ func (driver *Sharded) GroupBy(params structures.Params) (*structures.Aggregates
 	return &analytics, nil
 }
 
-func (driver *Sharded) OverTime(params structures.Params) (*structures.Intervals, error) {
+func (driver *Sharded) Series(params structures.Params) (*structures.Intervals, error) {
 	// Construct DBPath
 	dbPath := DBPath{
 		Name:      params.DBName,
@@ -286,7 +286,7 @@ func (driver *Sharded) OverTime(params structures.Params) (*structures.Intervals
 	return &analytics, nil
 }
 
-func (driver *Sharded) Push(params structures.Params, analytic structures.Analytic) error {
+func (driver *Sharded) Insert(params structures.Params, analytic structures.Analytic) error {
 	// Construct DBPath
 	dbPath := DBPath{
 		Name:      params.DBName,

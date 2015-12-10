@@ -105,7 +105,7 @@ func NewRouter(opts RouterOpts) http.Handler {
 			URL:       req.URL.String(),
 		}
 
-		analytics, err := driver.OverTime(params)
+		analytics, err := driver.Series(params)
 		if err != nil {
 			if driverErr, ok := err.(*driverErrors.DriverError); ok {
 				switch driverErr.Code {
@@ -310,7 +310,7 @@ func NewRouter(opts RouterOpts) http.Handler {
 			DBName: dbName,
 		}
 
-		err = driver.Push(params, analytic)
+		err = driver.Insert(params, analytic)
 		if err != nil {
 			if _, ok := err.(*driverErrors.DriverError); ok {
 				renderError(w, &errors.InsertFailed)
@@ -362,7 +362,7 @@ func NewRouter(opts RouterOpts) http.Handler {
 			DBName: dbName,
 		}
 
-		err = driver.Push(params, analytic)
+		err = driver.Insert(params, analytic)
 		if err != nil {
 			if _, ok := err.(*driverErrors.DriverError); ok {
 				renderError(w, &errors.InsertFailed)
@@ -421,7 +421,7 @@ func NewRouter(opts RouterOpts) http.Handler {
 				DBName: dbName,
 			}
 
-			err = driver.Push(params, analytic)
+			err = driver.Insert(params, analytic)
 			if err != nil {
 				if _, ok := err.(*driverErrors.DriverError); ok {
 					renderError(w, &errors.InsertFailed)
