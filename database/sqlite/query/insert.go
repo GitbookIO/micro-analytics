@@ -5,11 +5,11 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 
-	. "github.com/GitbookIO/micro-analytics/database/structures"
+	"github.com/GitbookIO/micro-analytics/database"
 )
 
 // Wrapper for inserting through a Database struct
-func Insert(db *sql.DB, analytic Analytic) error {
+func Insert(db *sql.DB, analytic database.Analytic) error {
 	insertQuery := sq.
 		Insert("visits").
 		Columns("time", "event", "path", "ip", "platform", "refererDomain", "countryCode").

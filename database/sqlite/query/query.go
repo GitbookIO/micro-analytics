@@ -7,12 +7,12 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 
-	. "github.com/GitbookIO/micro-analytics/database/structures"
+	"github.com/GitbookIO/micro-analytics/database"
 	"github.com/GitbookIO/micro-analytics/utils/geoip"
 )
 
 // Wrapper for querying a Database struct
-func Query(db *sql.DB, timeRange *TimeRange) (*Analytics, error) {
+func Query(db *sql.DB, timeRange *database.TimeRange) (*database.Analytics, error) {
 	// Query
 	queryBuilder := sq.
 		Select("time", "event", "path", "ip", "platform", "refererDomain", "countryCode").
@@ -42,9 +42,9 @@ func Query(db *sql.DB, timeRange *TimeRange) (*Analytics, error) {
 	}
 	defer rows.Close()
 
-	analytics := Analytics{}
+	analytics := database.Analytics{}
 	for rows.Next() {
-		analytic := Analytic{}
+		analytic := database.Analytic{}
 		var analyticTime int64
 		rows.Scan(&analyticTime,
 			&analytic.Event,
@@ -62,7 +62,7 @@ func Query(db *sql.DB, timeRange *TimeRange) (*Analytics, error) {
 }
 
 // Wrapper for querying a Database struct grouped by a property
-func GroupBy(db *sql.DB, property string, timeRange *TimeRange) (*Aggregates, error) {
+func GroupBy(db *sql.DB, property string, timeRange *database.TimeRange) (*database.Aggregates, error) {
 	// Query
 	queryBuilder := sq.
 		Select(property, "COUNT(*)").
@@ -93,9 +93,9 @@ func GroupBy(db *sql.DB, property string, timeRange *TimeRange) (*Aggregates, er
 	}
 	defer rows.Close()
 
-	list := Aggregates{}
+	list := database.Aggregates{}
 	for rows.Next() {
-		aggregate := Aggregate{}
+		aggregate := database.Aggregate{}
 		rows.Scan(&aggregate.Id, &aggregate.Total)
 
 		// For countries, get fullname as Label
@@ -112,7 +112,7 @@ func GroupBy(db *sql.DB, property string, timeRange *TimeRange) (*Aggregates, er
 }
 
 // Wrapper for querying a Database struct grouped by a property
-func GroupByUniq(db *sql.DB, property string, timeRange *TimeRange) (*Aggregates, error) {
+func GroupByUniq(db *sql.DB, property string, timeRange *database.TimeRange) (*database.Aggregates, error) {
 	// Subquery for counting unique IPs
 	subqueryBuilder := sq.
 		Select(property, "COUNT(DISTINCT ip) AS uniqueCount").
@@ -174,9 +174,9 @@ func GroupByUniq(db *sql.DB, property string, timeRange *TimeRange) (*Aggregates
 	defer rows.Close()
 
 	// Format results
-	list := Aggregates{}
+	list := database.Aggregates{}
 	for rows.Next() {
-		aggregate := Aggregate{}
+		aggregate := database.Aggregate{}
 		rows.Scan(&aggregate.Id, &aggregate.Total, &aggregate.Unique)
 
 		// For countries, get fullname as Label
@@ -193,7 +193,7 @@ func GroupByUniq(db *sql.DB, property string, timeRange *TimeRange) (*Aggregates
 }
 
 // Wrapper for querying a Database struct over a time interval
-func OverTime(db *sql.DB, interval int, timeRange *TimeRange) (*Intervals, error) {
+func OverTime(db *sql.DB, interval int, timeRange *database.TimeRange) (*database.Intervals, error) {
 	// Query
 	queryBuilder := sq.
 		Select(fmt.Sprintf("(time / %d) * %d AS startTime", interval, interval), "COUNT(*)").
@@ -225,9 +225,9 @@ func OverTime(db *sql.DB, interval int, timeRange *TimeRange) (*Intervals, error
 	defer rows.Close()
 
 	// Format results
-	intervals := Intervals{}
+	intervals := database.Intervals{}
 	for rows.Next() {
-		result := Interval{}
+		result := database.Interval{}
 		var startTime int
 
 		rows.Scan(&startTime, &result.Total)
@@ -243,7 +243,7 @@ func OverTime(db *sql.DB, interval int, timeRange *TimeRange) (*Intervals, error
 }
 
 // Wrapper for querying a Database struct over a time interval
-func OverTimeUniq(db *sql.DB, interval int, timeRange *TimeRange) (*Intervals, error) {
+func OverTimeUniq(db *sql.DB, interval int, timeRange *database.TimeRange) (*database.Intervals, error) {
 	// Subquery for counting unique IPs
 	subqueryBuilder := sq.
 		Select(fmt.Sprintf("(time / %d) * %d AS sqStartTime", interval, interval), "COUNT(DISTINCT ip) AS uniqueCount").
@@ -302,9 +302,9 @@ func OverTimeUniq(db *sql.DB, interval int, timeRange *TimeRange) (*Intervals, e
 	defer rows.Close()
 
 	// Format results
-	intervals := Intervals{}
+	intervals := database.Intervals{}
 	for rows.Next() {
-		result := Interval{}
+		result := database.Interval{}
 		var startTime int
 
 		rows.Scan(&startTime, &result.Total, &result.Unique)

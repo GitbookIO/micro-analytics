@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -12,14 +13,15 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/oschwald/maxminddb-golang"
 
+	webErrors "github.com/GitbookIO/micro-analytics/web/errors"
+	. "github.com/GitbookIO/micro-analytics/web/structures"
+
 	"github.com/GitbookIO/micro-analytics/database"
 	driverErrors "github.com/GitbookIO/micro-analytics/database/errors"
 	"github.com/GitbookIO/micro-analytics/database/sqlite"
-	"github.com/GitbookIO/micro-analytics/database/structures"
+
 	"github.com/GitbookIO/micro-analytics/utils"
 	"github.com/GitbookIO/micro-analytics/utils/geoip"
-	"github.com/GitbookIO/micro-analytics/web/errors"
-	. "github.com/GitbookIO/micro-analytics/web/structures"
 )
 
 type RouterOpts struct {
@@ -74,9 +76,9 @@ func NewRouter(opts RouterOpts) http.Handler {
 		intervalStr := req.Form.Get("interval")
 
 		// Convert startTime and endTime to a TimeRange
-		timeRange, err := structures.NewTimeRange(startTime, endTime)
+		timeRange, err := newTimeRange(startTime, endTime)
 		if err != nil {
-			renderError(w, &errors.InvalidTimeFormat)
+			renderError(w, &webErrors.InvalidTimeFormat)
 			return
 		}
 
@@ -86,7 +88,7 @@ func NewRouter(opts RouterOpts) http.Handler {
 		if len(intervalStr) > 0 {
 			interval, err = strconv.Atoi(intervalStr)
 			if err != nil {
-				renderError(w, &errors.InvalidInterval)
+				renderError(w, &webErrors.InvalidInterval)
 				return
 			}
 		}
@@ -97,7 +99,7 @@ func NewRouter(opts RouterOpts) http.Handler {
 		}
 
 		// Construct Params object
-		params := structures.Params{
+		params := database.Params{
 			DBName:    dbName,
 			Interval:  interval,
 			TimeRange: timeRange,
@@ -110,11 +112,11 @@ func NewRouter(opts RouterOpts) http.Handler {
 			if driverErr, ok := err.(*driverErrors.DriverError); ok {
 				switch driverErr.Code {
 				case 1:
-					renderError(w, &errors.InternalError)
+					renderError(w, &webErrors.InternalError)
 				case 2:
-					renderError(w, &errors.InvalidDatabaseName)
+					renderError(w, &webErrors.InvalidDatabaseName)
 				case 3:
-					renderError(w, &errors.InvalidTimeFormat)
+					renderError(w, &webErrors.InvalidTimeFormat)
 				default:
 					renderError(w, err)
 				}
@@ -149,7 +151,7 @@ func NewRouter(opts RouterOpts) http.Handler {
 		// Check that property is allowed to be queried
 		property, ok := allowedProperties[property]
 		if !ok {
-			renderError(w, &errors.InvalidProperty)
+			renderError(w, &webErrors.InvalidProperty)
 			return
 		}
 
@@ -163,9 +165,9 @@ func NewRouter(opts RouterOpts) http.Handler {
 		startTime := req.Form.Get("start")
 		endTime := req.Form.Get("end")
 
-		timeRange, err := structures.NewTimeRange(startTime, endTime)
+		timeRange, err := newTimeRange(startTime, endTime)
 		if err != nil {
-			renderError(w, &errors.InvalidTimeFormat)
+			renderError(w, &webErrors.InvalidTimeFormat)
 			return
 		}
 
@@ -175,7 +177,7 @@ func NewRouter(opts RouterOpts) http.Handler {
 		}
 
 		// Construct Params object
-		params := structures.Params{
+		params := database.Params{
 			DBName:    dbName,
 			Property:  property,
 			TimeRange: timeRange,
@@ -188,9 +190,9 @@ func NewRouter(opts RouterOpts) http.Handler {
 			if driverErr, ok := err.(*driverErrors.DriverError); ok {
 				switch driverErr.Code {
 				case 1:
-					renderError(w, &errors.InternalError)
+					renderError(w, &webErrors.InternalError)
 				case 2:
-					renderError(w, &errors.InvalidDatabaseName)
+					renderError(w, &webErrors.InvalidDatabaseName)
 				default:
 					renderError(w, err)
 				}
@@ -225,14 +227,14 @@ func NewRouter(opts RouterOpts) http.Handler {
 		startTime := req.Form.Get("start")
 		endTime := req.Form.Get("end")
 
-		timeRange, err := structures.NewTimeRange(startTime, endTime)
+		timeRange, err := newTimeRange(startTime, endTime)
 		if err != nil {
-			renderError(w, &errors.InvalidTimeFormat)
+			renderError(w, &webErrors.InvalidTimeFormat)
 			return
 		}
 
 		// Construct Params object
-		params := structures.Params{
+		params := database.Params{
 			DBName:    dbName,
 			TimeRange: timeRange,
 			URL:       req.URL.String(),
@@ -243,9 +245,9 @@ func NewRouter(opts RouterOpts) http.Handler {
 			if driverErr, ok := err.(*driverErrors.DriverError); ok {
 				switch driverErr.Code {
 				case 1:
-					renderError(w, &errors.InternalError)
+					renderError(w, &webErrors.InternalError)
 				case 2:
-					renderError(w, &errors.InvalidDatabaseName)
+					renderError(w, &webErrors.InvalidDatabaseName)
 				default:
 					renderError(w, err)
 				}
@@ -276,12 +278,12 @@ func NewRouter(opts RouterOpts) http.Handler {
 
 		// Invalid JSON
 		if err != nil {
-			renderError(w, &errors.InvalidJSON)
+			renderError(w, &webErrors.InvalidJSON)
 			return
 		}
 
 		// Create Analytic to inject in DB
-		analytic := structures.Analytic{
+		analytic := database.Analytic{
 			Time:  time.Now(),
 			Event: postData.Event,
 			Path:  postData.Path,
@@ -306,14 +308,14 @@ func NewRouter(opts RouterOpts) http.Handler {
 		analytic.CountryCode, err = geoip.GeoIpLookup(geolite2, postData.Ip)
 
 		// Construct Params object
-		params := structures.Params{
+		params := database.Params{
 			DBName: dbName,
 		}
 
 		err = driver.Insert(params, analytic)
 		if err != nil {
 			if _, ok := err.(*driverErrors.DriverError); ok {
-				renderError(w, &errors.InsertFailed)
+				renderError(w, &webErrors.InsertFailed)
 				return
 			}
 			renderError(w, err)
@@ -342,12 +344,12 @@ func NewRouter(opts RouterOpts) http.Handler {
 
 		// Invalid JSON
 		if err != nil {
-			renderError(w, &errors.InvalidJSON)
+			renderError(w, &webErrors.InvalidJSON)
 			return
 		}
 
 		// Create Analytic to inject in DB
-		analytic := structures.Analytic{
+		analytic := database.Analytic{
 			Time:          time.Unix(int64(postData.Time), 0),
 			Event:         postData.Event,
 			Path:          postData.Path,
@@ -358,14 +360,14 @@ func NewRouter(opts RouterOpts) http.Handler {
 		}
 
 		// Construct Params object
-		params := structures.Params{
+		params := database.Params{
 			DBName: dbName,
 		}
 
 		err = driver.Insert(params, analytic)
 		if err != nil {
 			if _, ok := err.(*driverErrors.DriverError); ok {
-				renderError(w, &errors.InsertFailed)
+				renderError(w, &webErrors.InsertFailed)
 				return
 			}
 			renderError(w, err)
@@ -394,13 +396,13 @@ func NewRouter(opts RouterOpts) http.Handler {
 
 		// Invalid JSON
 		if err != nil {
-			renderError(w, &errors.InvalidJSON)
+			renderError(w, &webErrors.InvalidJSON)
 			return
 		}
 
 		for _, postData := range postList.List {
 			// Create Analytic to inject in DB
-			analytic := structures.Analytic{
+			analytic := database.Analytic{
 				Time:          time.Unix(int64(postData.Time), 0),
 				Event:         postData.Event,
 				Path:          postData.Path,
@@ -417,14 +419,14 @@ func NewRouter(opts RouterOpts) http.Handler {
 			}
 
 			// Construct Params object
-			params := structures.Params{
+			params := database.Params{
 				DBName: dbName,
 			}
 
 			err = driver.Insert(params, analytic)
 			if err != nil {
 				if _, ok := err.(*driverErrors.DriverError); ok {
-					renderError(w, &errors.InsertFailed)
+					renderError(w, &webErrors.InsertFailed)
 					return
 				}
 				renderError(w, err)
@@ -449,7 +451,7 @@ func NewRouter(opts RouterOpts) http.Handler {
 		dbName := vars["dbName"]
 
 		// Construct Params object
-		params := structures.Params{
+		params := database.Params{
 			DBName: dbName,
 		}
 
@@ -458,9 +460,9 @@ func NewRouter(opts RouterOpts) http.Handler {
 			if driverErr, ok := err.(*driverErrors.DriverError); ok {
 				switch driverErr.Code {
 				case 1:
-					renderError(w, &errors.InternalError)
+					renderError(w, &webErrors.InternalError)
 				case 2:
-					renderError(w, &errors.InvalidDatabaseName)
+					renderError(w, &webErrors.InvalidDatabaseName)
 				default:
 					renderError(w, err)
 				}
@@ -474,4 +476,51 @@ func NewRouter(opts RouterOpts) http.Handler {
 	})
 
 	return r
+}
+
+// Initialize and validate a TimeRange struct with parameters
+func newTimeRange(start string, end string) (*database.TimeRange, error) {
+	// Return nil if neither start nor end provided
+	if len(start) == 0 && len(end) == 0 {
+		return nil, nil
+	}
+
+	timeRange := database.TimeRange{}
+
+	var startTime time.Time
+	var endTime time.Time
+
+	if len(start) > 0 {
+		// Try to parse as RFC3339
+		startTime, err := time.Parse(time.RFC3339, start)
+		if err != nil {
+			// Try to parse as RFC1123
+			startTime, err = time.Parse(time.RFC1123, start)
+			if err != nil {
+				return nil, err
+			}
+		}
+		timeRange.Start = startTime
+	}
+
+	if len(end) > 0 {
+		// Try to parse as RFC3339
+		endTime, err := time.Parse(time.RFC3339, end)
+		if err != nil {
+			// Try to parse as RFC1123
+			endTime, err = time.Parse(time.RFC1123, end)
+			if err != nil {
+				return nil, err
+			}
+		}
+		timeRange.End = endTime
+	}
+
+	// Ensure endTime < startTime
+	if len(start) > 0 && len(end) > 0 && endTime.Before(startTime) {
+		err := errors.New("start must be before end in a TimeRange")
+		return nil, err
+	}
+
+	return &timeRange, nil
 }

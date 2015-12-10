@@ -3,7 +3,6 @@ package sqlite
 import (
 	"github.com/GitbookIO/micro-analytics/database"
 	"github.com/GitbookIO/micro-analytics/database/errors"
-	"github.com/GitbookIO/micro-analytics/database/structures"
 
 	"github.com/GitbookIO/micro-analytics/database/sqlite/manager"
 	"github.com/GitbookIO/micro-analytics/database/sqlite/query"
@@ -22,7 +21,7 @@ func NewSimpleDriver(driverOpts database.DriverOpts) *SQLite {
 	}
 }
 
-func (driver *SQLite) Query(params structures.Params) (*structures.Analytics, error) {
+func (driver *SQLite) Query(params database.Params) (*database.Analytics, error) {
 	// Construct DBPath
 	dbPath := manager.DBPath{
 		Name:      params.DBName,
@@ -49,7 +48,7 @@ func (driver *SQLite) Query(params structures.Params) (*structures.Analytics, er
 	// If value is in Cache, return directly
 	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
 	// if inCache {
-	// 	if response, ok := cached.(*structures.Analytics); ok {
+	// 	if response, ok := cached.(*database.Analytics); ok {
 	// 		driver.DBManager.UnlockDB <- NewUnlock(dbPath)
 	// 		return response, nil
 	// 	}
@@ -67,7 +66,7 @@ func (driver *SQLite) Query(params structures.Params) (*structures.Analytics, er
 	return analytics, nil
 }
 
-func (driver *SQLite) GroupBy(params structures.Params) (*structures.Aggregates, error) {
+func (driver *SQLite) GroupBy(params database.Params) (*database.Aggregates, error) {
 	// Construct DBPath
 	dbPath := manager.DBPath{
 		Name:      params.DBName,
@@ -94,14 +93,14 @@ func (driver *SQLite) GroupBy(params structures.Params) (*structures.Aggregates,
 	// If value is in Cache, return directly
 	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
 	// if inCache {
-	// 	if response, ok := cached.(*structures.Aggregates); ok {
+	// 	if response, ok := cached.(*database.Aggregates); ok {
 	// 		driver.DBManager.UnlockDB <- NewUnlock(dbPath)
 	// 		return response, nil
 	// 	}
 	// }
 
 	// Check for unique query parameter to call function accordingly
-	var analytics *structures.Aggregates
+	var analytics *database.Aggregates
 
 	if params.Unique {
 		analytics, err = query.GroupByUniq(db.Conn, params.Property, params.TimeRange)
@@ -121,7 +120,7 @@ func (driver *SQLite) GroupBy(params structures.Params) (*structures.Aggregates,
 	return analytics, nil
 }
 
-func (driver *SQLite) Series(params structures.Params) (*structures.Intervals, error) {
+func (driver *SQLite) Series(params database.Params) (*database.Intervals, error) {
 	// Construct DBPath
 	dbPath := manager.DBPath{
 		Name:      params.DBName,
@@ -148,14 +147,14 @@ func (driver *SQLite) Series(params structures.Params) (*structures.Intervals, e
 	// If value is in Cache, return directly
 	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
 	// if inCache {
-	// 	if response, ok := cached.(*structures.Intervals); ok {
+	// 	if response, ok := cached.(*database.Intervals); ok {
 	// 		driver.DBManager.UnlockDB <- NewUnlock(dbPath)
 	// 		return response, nil
 	// 	}
 	// }
 
 	// Check for unique query parameter to call function accordingly
-	var analytics *structures.Intervals
+	var analytics *database.Intervals
 
 	if params.Unique {
 		analytics, err = query.OverTimeUniq(db.Conn, params.Interval, params.TimeRange)
@@ -175,7 +174,7 @@ func (driver *SQLite) Series(params structures.Params) (*structures.Intervals, e
 	return analytics, nil
 }
 
-func (driver *SQLite) Insert(params structures.Params, analytic structures.Analytic) error {
+func (driver *SQLite) Insert(params database.Params, analytic database.Analytic) error {
 	// Construct DBPath
 	dbPath := manager.DBPath{
 		Name:      params.DBName,
@@ -198,7 +197,7 @@ func (driver *SQLite) Insert(params structures.Params, analytic structures.Analy
 	return nil
 }
 
-func (driver *SQLite) Delete(params structures.Params) error {
+func (driver *SQLite) Delete(params database.Params) error {
 	// Construct DBPath
 	dbPath := manager.DBPath{
 		Name:      params.DBName,

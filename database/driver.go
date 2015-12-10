@@ -1,9 +1,5 @@
 package database
 
-import (
-	. "github.com/GitbookIO/micro-analytics/database/structures"
-)
-
 type Driver interface {
 	// Return aggregated stats by property
 	GroupBy(params Params) (*Aggregates, error)
