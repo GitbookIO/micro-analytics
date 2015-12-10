@@ -21,7 +21,7 @@ type Sharded struct {
 }
 
 func NewShardedDriver(driverOpts database.DriverOpts) *Sharded {
-	manager := manager.NewManager(manager.ManagerOpts{driverOpts})
+	manager := manager.New(manager.Opts{driverOpts})
 	return &Sharded{
 		DBManager: manager,
 		directory: driverOpts.Directory,

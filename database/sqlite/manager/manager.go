@@ -14,7 +14,7 @@ import (
 	"github.com/GitbookIO/micro-analytics/utils"
 )
 
-type ManagerOpts struct {
+type Opts struct {
 	database.DriverOpts
 }
 
@@ -28,7 +28,7 @@ type DBManager struct {
 }
 
 // Get a new DBManager
-func NewManager(opts ManagerOpts) *DBManager {
+func New(opts Opts) *DBManager {
 	manager := DBManager{
 		DBs:       map[string]*Database{},
 		StartTime: time.Now(),
