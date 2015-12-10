@@ -4,10 +4,12 @@ import (
 	"github.com/GitbookIO/micro-analytics/database"
 	"github.com/GitbookIO/micro-analytics/database/errors"
 	"github.com/GitbookIO/micro-analytics/database/structures"
+
+	"github.com/GitbookIO/micro-analytics/database/sqlite/manager"
 )
 
 type SQLite struct {
-	DBManager *DBManager
+	DBManager *manager.DBManager
 	directory string
 }
 

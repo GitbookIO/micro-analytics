@@ -9,16 +9,18 @@ import (
 	"github.com/GitbookIO/micro-analytics/database"
 	"github.com/GitbookIO/micro-analytics/database/errors"
 	"github.com/GitbookIO/micro-analytics/database/structures"
+
+	"github.com/GitbookIO/micro-analytics/database/sqlite/manager"
 )
 
 type Sharded struct {
-	DBManager *DBManager
+	DBManager *manager.DBManager
 	directory string
 	logger    *logger.Logger
 }
 
 func NewShardedDriver(driverOpts database.DriverOpts) *Sharded {
-	manager := NewManager(ManagerOpts{driverOpts})
+	manager := manager.NewManager(manager.ManagerOpts{driverOpts})
 	return &Sharded{
 		DBManager: manager,
 		directory: driverOpts.Directory,
@@ -28,7 +30,7 @@ func NewShardedDriver(driverOpts database.DriverOpts) *Sharded {
 
 func (driver *Sharded) Query(params structures.Params) (*structures.Analytics, error) {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
@@ -63,7 +65,7 @@ func (driver *Sharded) Query(params structures.Params) (*structures.Analytics, e
 		}
 
 		// Construct each shard DBPath
-		shardPath := DBPath{
+		shardPath := manager.DBPath{
 			Name:      shard,
 			Directory: dbPath.String(),
 		}
@@ -103,7 +105,7 @@ func (driver *Sharded) Query(params structures.Params) (*structures.Analytics, e
 
 func (driver *Sharded) GroupBy(params structures.Params) (*structures.Aggregates, error) {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
@@ -142,7 +144,7 @@ func (driver *Sharded) GroupBy(params structures.Params) (*structures.Aggregates
 		}
 
 		// Construct each shard DBPath
-		shardPath := DBPath{
+		shardPath := manager.DBPath{
 			Name:      shard,
 			Directory: dbPath.String(),
 		}
@@ -202,7 +204,7 @@ func (driver *Sharded) GroupBy(params structures.Params) (*structures.Aggregates
 
 func (driver *Sharded) Series(params structures.Params) (*structures.Intervals, error) {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
@@ -239,7 +241,7 @@ func (driver *Sharded) Series(params structures.Params) (*structures.Intervals, 
 		}
 
 		// Construct each shard DBPath
-		shardPath := DBPath{
+		shardPath := manager.DBPath{
 			Name:      shard,
 			Directory: dbPath.String(),
 		}
@@ -288,7 +290,7 @@ func (driver *Sharded) Series(params structures.Params) (*structures.Intervals, 
 
 func (driver *Sharded) Insert(params structures.Params, analytic structures.Analytic) error {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
@@ -297,7 +299,7 @@ func (driver *Sharded) Insert(params structures.Params, analytic structures.Anal
 	shardName := TimeToShard(analytic.Time)
 
 	// Construct shard DBPath
-	shardPath := DBPath{
+	shardPath := manager.DBPath{
 		Name:      shardName,
 		Directory: dbPath.String(),
 	}
@@ -322,7 +324,7 @@ func (driver *Sharded) Insert(params structures.Params, analytic structures.Anal
 
 func (driver *Sharded) Delete(params structures.Params) error {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
@@ -348,6 +350,20 @@ func (driver *Sharded) Delete(params structures.Params) error {
 func TimeToShard(timeValue time.Time) string {
 	layout := "200601"
 	return timeValue.Format(layout)
+}
+
+func ListShards(dbPath manager.DBPath) []string {
+	folders, err := ioutil.ReadDir(dbPath.String())
+	if err != nil {
+		return nil
+	}
+
+	shards := make([]string, 0)
+	for _, folder := range folders {
+		shards = append(shards, folder.Name())
+	}
+
+	return shards
 }
 
 var _ database.Driver = &Sharded{}

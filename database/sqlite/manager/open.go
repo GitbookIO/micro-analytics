@@ -1,4 +1,4 @@
-package sqlite
+package manager
 
 import (
 	"database/sql"
@@ -46,12 +46,10 @@ func OpenAndInitialize(dbPath string) (*sql.DB, error) {
 	}
 
 	// Create table at initialization
-	if !TableExists(db) {
-		_, err = db.Exec(createTable)
-		if err != nil {
-			log.Error("Error [%v] creating table %s", err, dbPath)
-			return nil, err
-		}
+	_, err = db.Exec(createTable)
+	if err != nil {
+		log.Error("Error [%v] creating table %s", err, dbPath)
+		return nil, err
 	}
 
 	return db, nil
