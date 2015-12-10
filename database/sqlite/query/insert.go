@@ -1,20 +1,15 @@
-package sqlite
+package query
 
 import (
+	"database/sql"
+
 	sq "github.com/Masterminds/squirrel"
-	"github.com/azer/logger"
-	_ "github.com/mattn/go-sqlite3"
 
 	. "github.com/GitbookIO/micro-analytics/database/structures"
 )
 
 // Wrapper for inserting through a Database struct
-func (db *Database) Insert(analytic Analytic) error {
-	db.Lock()
-	defer db.Unlock()
-
-	var log = logger.New("[Database.Insert]")
-
+func Insert(db *sql.DB, analytic Analytic) error {
 	insertQuery := sq.
 		Insert("visits").
 		Columns("time", "event", "path", "ip", "platform", "refererDomain", "countryCode").
@@ -25,11 +20,10 @@ func (db *Database) Insert(analytic Analytic) error {
 		analytic.Platform,
 		analytic.RefererDomain,
 		analytic.CountryCode).
-		RunWith(db.Conn)
+		RunWith(db)
 
 	_, err := insertQuery.Exec()
 	if err != nil {
-		log.Error("Error [%v] inserting analytic %#v", err, analytic)
 		return err
 	}
 
