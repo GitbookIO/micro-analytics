@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"io/ioutil"
 	"strconv"
 	"time"
 
