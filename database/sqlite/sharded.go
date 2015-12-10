@@ -49,7 +49,7 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 
 	// At this point, there should be shards to query
 	// Get list of shards by reading directory
-	shards := ListShards(dbPath)
+	shards := listShards(dbPath)
 	analytics := database.Analytics{}
 
 	// Read from each shard
@@ -124,7 +124,7 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 
 	// At this point, there should be shards to query
 	// Get list of shards by reading directory
-	shards := ListShards(dbPath)
+	shards := listShards(dbPath)
 
 	// Aggregated query result
 	analytics := database.Aggregates{}
@@ -223,7 +223,7 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 
 	// At this point, there should be shards to query
 	// Get list of shards by reading directory
-	shards := ListShards(dbPath)
+	shards := listShards(dbPath)
 
 	// Aggregated query result
 	analytics := database.Intervals{}
@@ -297,7 +297,7 @@ func (driver *Sharded) Insert(params database.Params, analytic database.Analytic
 	}
 
 	// Push to right shard based on analytic time
-	shardName := TimeToShard(analytic.Time)
+	shardName := timeToShard(analytic.Time)
 
 	// Construct shard DBPath
 	shardPath := manager.DBPath{
@@ -348,12 +348,12 @@ func (driver *Sharded) Delete(params database.Params) error {
 
 // Convert a time to a shard name
 // 2015-12-08T00:00:00.000Z -> 201512
-func TimeToShard(timeValue time.Time) string {
+func timeToShard(timeValue time.Time) string {
 	layout := "200601"
 	return timeValue.Format(layout)
 }
 
-func ListShards(dbPath manager.DBPath) []string {
+func listShards(dbPath manager.DBPath) []string {
 	folders, err := ioutil.ReadDir(dbPath.String())
 	if err != nil {
 		return nil
