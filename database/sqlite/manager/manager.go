@@ -169,7 +169,7 @@ func (manager *DBManager) openOrCreate(dbPath DBPath) (*sql.DB, error) {
 }
 
 func (manager *DBManager) openDB(dbPath DBPath) (*sql.DB, error) {
-	conn, err := Open(dbPath.FileName())
+	conn, err := OpenConnection(dbPath.FileName())
 	if err != nil {
 		manager.Logger.Error("Error [%v] opening DB %s", err, dbPath)
 		return nil, err
@@ -184,7 +184,7 @@ func (manager *DBManager) createDB(dbPath DBPath) (*sql.DB, error) {
 	}
 
 	// Open DB connection and returns the full Database
-	conn, err := OpenAndInitialize(dbPath.FileName())
+	conn, err := InitializeDatabase(dbPath.FileName())
 	if err != nil {
 		manager.Logger.Error("Error [%v] opening DB %s", err, dbPath)
 		return nil, err
