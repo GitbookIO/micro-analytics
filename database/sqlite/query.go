@@ -1,406 +1,406 @@
 package sqlite
 
 import (
-    "fmt"
-    "time"
+	"fmt"
+	"time"
 
-    . "github.com/GitbookIO/micro-analytics/database/structures"
-    "github.com/GitbookIO/micro-analytics/utils/geoip"
-    sq "github.com/Masterminds/squirrel"
-    "github.com/azer/logger"
+	. "github.com/GitbookIO/micro-analytics/database/structures"
+	"github.com/GitbookIO/micro-analytics/utils/geoip"
+	sq "github.com/Masterminds/squirrel"
+	"github.com/azer/logger"
 )
 
 // Wrapper for querying a Database struct
 func (db *Database) Query(timeRange *TimeRange) (*Analytics, error) {
-    db.Lock()
-    defer db.Unlock()
+	db.Lock()
+	defer db.Unlock()
 
-    var log = logger.New("[Database.Query]")
+	var log = logger.New("[Database.Query]")
 
-    // Query
-    queryBuilder := sq.
-        Select("time", "event", "path", "ip", "platform", "refererDomain", "countryCode").
-        From("visits")
+	// Query
+	queryBuilder := sq.
+		Select("time", "event", "path", "ip", "platform", "refererDomain", "countryCode").
+		From("visits")
 
-    // Add time constraints if timeRange provided
-    if timeRange != nil {
-        if !timeRange.Start.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
-            queryBuilder = queryBuilder.Where(timeQuery)
-        }
-        if !timeRange.End.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
-            queryBuilder = queryBuilder.Where(timeQuery)
-        }
-    }
+	// Add time constraints if timeRange provided
+	if timeRange != nil {
+		if !timeRange.Start.Equal(time.Time{}) {
+			timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
+			queryBuilder = queryBuilder.Where(timeQuery)
+		}
+		if !timeRange.End.Equal(time.Time{}) {
+			timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
+			queryBuilder = queryBuilder.Where(timeQuery)
+		}
+	}
 
-    query, _, err := queryBuilder.ToSql()
-    if err != nil {
-        log.Error("Error [%v] building query for DB %s", err, db.Name())
-        return nil, err
-    }
+	query, _, err := queryBuilder.ToSql()
+	if err != nil {
+		log.Error("Error [%v] building query for DB %s", err, db.Name())
+		return nil, err
+	}
 
-    // Exec query
-    rows, err := db.Conn.Query(query)
-    if err != nil {
-        log.Error("Error [%v] querying DB %s", err, db.Name())
-        return nil, err
-    }
-    defer rows.Close()
+	// Exec query
+	rows, err := db.Conn.Query(query)
+	if err != nil {
+		log.Error("Error [%v] querying DB %s", err, db.Name())
+		return nil, err
+	}
+	defer rows.Close()
 
-    analytics := Analytics{}
-    for rows.Next() {
-        analytic := Analytic{}
-        var analyticTime int64
-        rows.Scan(&analyticTime,
-            &analytic.Event,
-            &analytic.Path,
-            &analytic.Ip,
-            &analytic.Platform,
-            &analytic.RefererDomain,
-            &analytic.CountryCode)
+	analytics := Analytics{}
+	for rows.Next() {
+		analytic := Analytic{}
+		var analyticTime int64
+		rows.Scan(&analyticTime,
+			&analytic.Event,
+			&analytic.Path,
+			&analytic.Ip,
+			&analytic.Platform,
+			&analytic.RefererDomain,
+			&analytic.CountryCode)
 
-        analytic.Time = time.Unix(analyticTime, 0)
-        analytics.List = append(analytics.List, analytic)
-    }
+		analytic.Time = time.Unix(analyticTime, 0)
+		analytics.List = append(analytics.List, analytic)
+	}
 
-    return &analytics, nil
+	return &analytics, nil
 }
 
 // Wrapper for querying a Database struct grouped by a property
 func (db *Database) GroupBy(property string, timeRange *TimeRange) (*Aggregates, error) {
-    db.Lock()
-    defer db.Unlock()
+	db.Lock()
+	defer db.Unlock()
 
-    var log = logger.New("[Database.GroupBy]")
+	var log = logger.New("[Database.GroupBy]")
 
-    // Query
-    queryBuilder := sq.
-        Select(property, "COUNT(*)").
-        From("visits")
+	// Query
+	queryBuilder := sq.
+		Select(property, "COUNT(*)").
+		From("visits")
 
-    // Add time constraints if timeRange provided
-    if timeRange != nil {
-        if !timeRange.Start.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
-            queryBuilder = queryBuilder.Where(timeQuery)
-        }
-        if !timeRange.End.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
-            queryBuilder = queryBuilder.Where(timeQuery)
-        }
-    }
+	// Add time constraints if timeRange provided
+	if timeRange != nil {
+		if !timeRange.Start.Equal(time.Time{}) {
+			timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
+			queryBuilder = queryBuilder.Where(timeQuery)
+		}
+		if !timeRange.End.Equal(time.Time{}) {
+			timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
+			queryBuilder = queryBuilder.Where(timeQuery)
+		}
+	}
 
-    // Set query Group By condition
-    query, _, err := queryBuilder.GroupBy(property).ToSql()
-    if err != nil {
-        log.Error("Error [%v] building query for DB %s", err, db.Name())
-        return nil, err
-    }
+	// Set query Group By condition
+	query, _, err := queryBuilder.GroupBy(property).ToSql()
+	if err != nil {
+		log.Error("Error [%v] building query for DB %s", err, db.Name())
+		return nil, err
+	}
 
-    // Exec query
-    rows, err := db.Conn.Query(query)
-    if err != nil {
-        log.Error("Error [%v] querying DB %s", err, db.Name())
-        return nil, err
-    }
-    defer rows.Close()
+	// Exec query
+	rows, err := db.Conn.Query(query)
+	if err != nil {
+		log.Error("Error [%v] querying DB %s", err, db.Name())
+		return nil, err
+	}
+	defer rows.Close()
 
-    list := Aggregates{}
-    for rows.Next() {
-        aggregate := Aggregate{}
-        rows.Scan(&aggregate.Id, &aggregate.Total)
+	list := Aggregates{}
+	for rows.Next() {
+		aggregate := Aggregate{}
+		rows.Scan(&aggregate.Id, &aggregate.Total)
 
-        // For countries, get fullname as Label
-        if property == "countryCode" {
-            aggregate.Label = geoip.GetCountry(aggregate.Id)
-        } else {
-            aggregate.Label = aggregate.Id
-        }
+		// For countries, get fullname as Label
+		if property == "countryCode" {
+			aggregate.Label = geoip.GetCountry(aggregate.Id)
+		} else {
+			aggregate.Label = aggregate.Id
+		}
 
-        list.List = append(list.List, aggregate)
-    }
+		list.List = append(list.List, aggregate)
+	}
 
-    return &list, nil
+	return &list, nil
 }
 
 // Wrapper for querying a Database struct grouped by a property
 func (db *Database) GroupByUniq(property string, timeRange *TimeRange) (*Aggregates, error) {
-    db.Lock()
-    defer db.Unlock()
+	db.Lock()
+	defer db.Unlock()
 
-    var log = logger.New("[Database.GroupByUniq]")
+	var log = logger.New("[Database.GroupByUniq]")
 
-    // Subquery for counting unique IPs
-    subqueryBuilder := sq.
-        Select(property, "COUNT(DISTINCT ip) AS uniqueCount").
-        From("visits")
+	// Subquery for counting unique IPs
+	subqueryBuilder := sq.
+		Select(property, "COUNT(DISTINCT ip) AS uniqueCount").
+		From("visits")
 
-    // Add time constraints if timeRange provided
-    if timeRange != nil {
-        if !timeRange.Start.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
-            subqueryBuilder = subqueryBuilder.Where(timeQuery)
-        }
-        if !timeRange.End.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
-            subqueryBuilder = subqueryBuilder.Where(timeQuery)
-        }
-    }
+	// Add time constraints if timeRange provided
+	if timeRange != nil {
+		if !timeRange.Start.Equal(time.Time{}) {
+			timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
+			subqueryBuilder = subqueryBuilder.Where(timeQuery)
+		}
+		if !timeRange.End.Equal(time.Time{}) {
+			timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
+			subqueryBuilder = subqueryBuilder.Where(timeQuery)
+		}
+	}
 
-    // Format subquery
-    subquery, _, err := subqueryBuilder.GroupBy(property).ToSql()
-    if err != nil {
-        log.Error("Error [%v] building subquery for DB %s", err, db.Name())
-        return nil, err
-    }
+	// Format subquery
+	subquery, _, err := subqueryBuilder.GroupBy(property).ToSql()
+	if err != nil {
+		log.Error("Error [%v] building subquery for DB %s", err, db.Name())
+		return nil, err
+	}
 
-    subquery = fmt.Sprintf("(%s) AS subquery", subquery)
+	subquery = fmt.Sprintf("(%s) AS subquery", subquery)
 
-    // Query
-    tableProperty := fmt.Sprintf("visits.%s", property)
-    subqueryProperty := fmt.Sprintf("subquery.%s", property)
-    joinClause := fmt.Sprintf("%s ON %s = %s", subquery, tableProperty, subqueryProperty)
+	// Query
+	tableProperty := fmt.Sprintf("visits.%s", property)
+	subqueryProperty := fmt.Sprintf("subquery.%s", property)
+	joinClause := fmt.Sprintf("%s ON %s = %s", subquery, tableProperty, subqueryProperty)
 
-    queryBuilder := sq.
-        Select(tableProperty, "COUNT(*) AS total", "uniqueCount").
-        From("visits").
-        Join(joinClause)
+	queryBuilder := sq.
+		Select(tableProperty, "COUNT(*) AS total", "uniqueCount").
+		From("visits").
+		Join(joinClause)
 
-    // Add time constraints if timeRange provided
-    if timeRange != nil {
-        if !timeRange.Start.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
-            queryBuilder = queryBuilder.Where(timeQuery)
-        }
-        if !timeRange.End.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
-            queryBuilder = queryBuilder.Where(timeQuery)
-        }
-    }
+	// Add time constraints if timeRange provided
+	if timeRange != nil {
+		if !timeRange.Start.Equal(time.Time{}) {
+			timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
+			queryBuilder = queryBuilder.Where(timeQuery)
+		}
+		if !timeRange.End.Equal(time.Time{}) {
+			timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
+			queryBuilder = queryBuilder.Where(timeQuery)
+		}
+	}
 
-    // Format query
-    query, _, err := queryBuilder.GroupBy(tableProperty).ToSql()
-    if err != nil {
-        log.Error("Error [%v] building query for DB %s", err, db.Name())
-        return nil, err
-    }
+	// Format query
+	query, _, err := queryBuilder.GroupBy(tableProperty).ToSql()
+	if err != nil {
+		log.Error("Error [%v] building query for DB %s", err, db.Name())
+		return nil, err
+	}
 
-    // Exec query
-    rows, err := db.Conn.Query(query)
-    if err != nil {
-        log.Error("Error [%v] querying DB %s", err, db.Name())
-        return nil, err
-    }
-    defer rows.Close()
+	// Exec query
+	rows, err := db.Conn.Query(query)
+	if err != nil {
+		log.Error("Error [%v] querying DB %s", err, db.Name())
+		return nil, err
+	}
+	defer rows.Close()
 
-    // Format results
-    list := Aggregates{}
-    for rows.Next() {
-        aggregate := Aggregate{}
-        rows.Scan(&aggregate.Id, &aggregate.Total, &aggregate.Unique)
+	// Format results
+	list := Aggregates{}
+	for rows.Next() {
+		aggregate := Aggregate{}
+		rows.Scan(&aggregate.Id, &aggregate.Total, &aggregate.Unique)
 
-        // For countries, get fullname as Label
-        if property == "countryCode" {
-            aggregate.Label = geoip.GetCountry(aggregate.Id)
-        } else {
-            aggregate.Label = aggregate.Id
-        }
+		// For countries, get fullname as Label
+		if property == "countryCode" {
+			aggregate.Label = geoip.GetCountry(aggregate.Id)
+		} else {
+			aggregate.Label = aggregate.Id
+		}
 
-        list.List = append(list.List, aggregate)
-    }
+		list.List = append(list.List, aggregate)
+	}
 
-    return &list, nil
+	return &list, nil
 }
 
 // Wrapper for querying a Database struct over a time interval
 func (db *Database) OverTime(interval int, timeRange *TimeRange) (*Intervals, error) {
-    db.Lock()
-    defer db.Unlock()
+	db.Lock()
+	defer db.Unlock()
 
-    var log = logger.New("[Database.OverTime]")
+	var log = logger.New("[Database.OverTime]")
 
-    // Query
-    queryBuilder := sq.
-        Select(fmt.Sprintf("(time / %d) * %d AS startTime", interval, interval), "COUNT(*)").
-        From("visits")
+	// Query
+	queryBuilder := sq.
+		Select(fmt.Sprintf("(time / %d) * %d AS startTime", interval, interval), "COUNT(*)").
+		From("visits")
 
-    // Add time constraints if timeRange provided
-    if timeRange != nil {
-        if !timeRange.Start.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
-            queryBuilder = queryBuilder.Where(timeQuery)
-        }
-        if !timeRange.End.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
-            queryBuilder = queryBuilder.Where(timeQuery)
-        }
-    }
+	// Add time constraints if timeRange provided
+	if timeRange != nil {
+		if !timeRange.Start.Equal(time.Time{}) {
+			timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
+			queryBuilder = queryBuilder.Where(timeQuery)
+		}
+		if !timeRange.End.Equal(time.Time{}) {
+			timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
+			queryBuilder = queryBuilder.Where(timeQuery)
+		}
+	}
 
-    // Set query Group By condition
-    query, _, err := queryBuilder.GroupBy("startTime").ToSql()
-    if err != nil {
-        log.Error("Error [%v] building query for DB %s", err, db.Name())
-        return nil, err
-    }
+	// Set query Group By condition
+	query, _, err := queryBuilder.GroupBy("startTime").ToSql()
+	if err != nil {
+		log.Error("Error [%v] building query for DB %s", err, db.Name())
+		return nil, err
+	}
 
-    // Exec query
-    rows, err := db.Conn.Query(query)
-    if err != nil {
-        log.Error("Error [%v] querying DB %s", err, db.Name())
-        return nil, err
-    }
-    defer rows.Close()
+	// Exec query
+	rows, err := db.Conn.Query(query)
+	if err != nil {
+		log.Error("Error [%v] querying DB %s", err, db.Name())
+		return nil, err
+	}
+	defer rows.Close()
 
-    // Format results
-    intervals := Intervals{}
-    for rows.Next() {
-        result := Interval{}
-        var startTime int
+	// Format results
+	intervals := Intervals{}
+	for rows.Next() {
+		result := Interval{}
+		var startTime int
 
-        rows.Scan(&startTime, &result.Total)
+		rows.Scan(&startTime, &result.Total)
 
-        // Format Start and End from TIMESTAMP to ISO time
-        result.Start = time.Unix(int64(startTime), 0).Format(time.RFC3339)
-        result.End = time.Unix(int64(startTime+interval), 0).Format(time.RFC3339)
+		// Format Start and End from TIMESTAMP to ISO time
+		result.Start = time.Unix(int64(startTime), 0).Format(time.RFC3339)
+		result.End = time.Unix(int64(startTime+interval), 0).Format(time.RFC3339)
 
-        intervals.List = append(intervals.List, result)
-    }
+		intervals.List = append(intervals.List, result)
+	}
 
-    return &intervals, nil
+	return &intervals, nil
 }
 
 // Wrapper for querying a Database struct over a time interval
 func (db *Database) OverTimeUniq(interval int, timeRange *TimeRange) (*Intervals, error) {
-    db.Lock()
-    defer db.Unlock()
+	db.Lock()
+	defer db.Unlock()
 
-    var log = logger.New("[Database.OverTimeUniq]")
+	var log = logger.New("[Database.OverTimeUniq]")
 
-    // Subquery for counting unique IPs
-    subqueryBuilder := sq.
-        Select(fmt.Sprintf("(time / %d) * %d AS sqStartTime", interval, interval), "COUNT(DISTINCT ip) AS uniqueCount").
-        From("visits")
+	// Subquery for counting unique IPs
+	subqueryBuilder := sq.
+		Select(fmt.Sprintf("(time / %d) * %d AS sqStartTime", interval, interval), "COUNT(DISTINCT ip) AS uniqueCount").
+		From("visits")
 
-    // Add time constraints if timeRange provided
-    if timeRange != nil {
-        if !timeRange.Start.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
-            subqueryBuilder = subqueryBuilder.Where(timeQuery)
-        }
-        if !timeRange.End.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
-            subqueryBuilder = subqueryBuilder.Where(timeQuery)
-        }
-    }
+	// Add time constraints if timeRange provided
+	if timeRange != nil {
+		if !timeRange.Start.Equal(time.Time{}) {
+			timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
+			subqueryBuilder = subqueryBuilder.Where(timeQuery)
+		}
+		if !timeRange.End.Equal(time.Time{}) {
+			timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
+			subqueryBuilder = subqueryBuilder.Where(timeQuery)
+		}
+	}
 
-    // Format subquery
-    subquery, _, err := subqueryBuilder.GroupBy("sqStartTime").ToSql()
-    if err != nil {
-        log.Error("Error [%v] building subquery for DB %s", err, db.Name())
-        return nil, err
-    }
+	// Format subquery
+	subquery, _, err := subqueryBuilder.GroupBy("sqStartTime").ToSql()
+	if err != nil {
+		log.Error("Error [%v] building subquery for DB %s", err, db.Name())
+		return nil, err
+	}
 
-    subquery = fmt.Sprintf("(%s) AS subquery", subquery)
+	subquery = fmt.Sprintf("(%s) AS subquery", subquery)
 
-    // Query
-    joinClause := fmt.Sprintf("%s ON sqStartTime = startTime", subquery)
-    queryBuilder := sq.
-        Select(fmt.Sprintf("(time / %d) * %d AS startTime", interval, interval), "COUNT(*) AS total", "uniqueCount").
-        From("visits").
-        Join(joinClause)
+	// Query
+	joinClause := fmt.Sprintf("%s ON sqStartTime = startTime", subquery)
+	queryBuilder := sq.
+		Select(fmt.Sprintf("(time / %d) * %d AS startTime", interval, interval), "COUNT(*) AS total", "uniqueCount").
+		From("visits").
+		Join(joinClause)
 
-    // Add time constraints if timeRange provided
-    if timeRange != nil {
-        if !timeRange.Start.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
-            queryBuilder = queryBuilder.Where(timeQuery)
-        }
-        if !timeRange.End.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
-            queryBuilder = queryBuilder.Where(timeQuery)
-        }
-    }
+	// Add time constraints if timeRange provided
+	if timeRange != nil {
+		if !timeRange.Start.Equal(time.Time{}) {
+			timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
+			queryBuilder = queryBuilder.Where(timeQuery)
+		}
+		if !timeRange.End.Equal(time.Time{}) {
+			timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
+			queryBuilder = queryBuilder.Where(timeQuery)
+		}
+	}
 
-    // Set query Group By condition
-    query, _, err := queryBuilder.GroupBy("startTime").ToSql()
-    if err != nil {
-        log.Error("Error [%v] building query for DB %s", err, db.Name())
-        return nil, err
-    }
+	// Set query Group By condition
+	query, _, err := queryBuilder.GroupBy("startTime").ToSql()
+	if err != nil {
+		log.Error("Error [%v] building query for DB %s", err, db.Name())
+		return nil, err
+	}
 
-    // Exec query
-    rows, err := db.Conn.Query(query)
-    if err != nil {
-        log.Error("Error [%v] querying DB %s", err, db.Name())
-        return nil, err
-    }
-    defer rows.Close()
+	// Exec query
+	rows, err := db.Conn.Query(query)
+	if err != nil {
+		log.Error("Error [%v] querying DB %s", err, db.Name())
+		return nil, err
+	}
+	defer rows.Close()
 
-    // Format results
-    intervals := Intervals{}
-    for rows.Next() {
-        result := Interval{}
-        var startTime int
+	// Format results
+	intervals := Intervals{}
+	for rows.Next() {
+		result := Interval{}
+		var startTime int
 
-        rows.Scan(&startTime, &result.Total, &result.Unique)
+		rows.Scan(&startTime, &result.Total, &result.Unique)
 
-        // Format Start and End from TIMESTAMP to ISO time
-        result.Start = time.Unix(int64(startTime), 0).Format(time.RFC3339)
-        result.End = time.Unix(int64(startTime+interval), 0).Format(time.RFC3339)
+		// Format Start and End from TIMESTAMP to ISO time
+		result.Start = time.Unix(int64(startTime), 0).Format(time.RFC3339)
+		result.End = time.Unix(int64(startTime+interval), 0).Format(time.RFC3339)
 
-        intervals.List = append(intervals.List, result)
-    }
+		intervals.List = append(intervals.List, result)
+	}
 
-    return &intervals, nil
+	return &intervals, nil
 }
 
 // Wrapper for querying a Database struct grouped by a property for which IP is unique
 func (db *Database) CountUniqueWhere(property string, value string, timeRange *TimeRange) (int, error) {
-    db.Lock()
-    defer db.Unlock()
+	db.Lock()
+	defer db.Unlock()
 
-    var log = logger.New("[Database.CountUniqueWhere]")
+	var log = logger.New("[Database.CountUniqueWhere]")
 
-    // Query
-    queryBuilder := sq.
-        Select("COUNT(DISTINCT ip)").
-        From("visits")
+	// Query
+	queryBuilder := sq.
+		Select("COUNT(DISTINCT ip)").
+		From("visits")
 
-    // Add time constraints if timeRange provided
-    if timeRange != nil {
-        if !timeRange.Start.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
-            queryBuilder = queryBuilder.Where(timeQuery)
-        }
-        if !timeRange.End.Equal(time.Time{}) {
-            timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
-            queryBuilder = queryBuilder.Where(timeQuery)
-        }
-    }
+	// Add time constraints if timeRange provided
+	if timeRange != nil {
+		if !timeRange.Start.Equal(time.Time{}) {
+			timeQuery := fmt.Sprintf("time >= %d", timeRange.Start.Unix())
+			queryBuilder = queryBuilder.Where(timeQuery)
+		}
+		if !timeRange.End.Equal(time.Time{}) {
+			timeQuery := fmt.Sprintf("time <= %d", timeRange.End.Unix())
+			queryBuilder = queryBuilder.Where(timeQuery)
+		}
+	}
 
-    // Set condition on value
-    queryBuilder = queryBuilder.Where(fmt.Sprintf("%s = '%s'", property, value))
+	// Set condition on value
+	queryBuilder = queryBuilder.Where(fmt.Sprintf("%s = '%s'", property, value))
 
-    // Set query Group By condition
-    query, _, err := queryBuilder.GroupBy(property).ToSql()
-    if err != nil {
-        log.Error("Error [%v] building query for DB %s", err, db.Name())
-        return 0, err
-    }
+	// Set query Group By condition
+	query, _, err := queryBuilder.GroupBy(property).ToSql()
+	if err != nil {
+		log.Error("Error [%v] building query for DB %s", err, db.Name())
+		return 0, err
+	}
 
-    // Exec query
-    rows, err := db.Conn.Query(query)
-    if err != nil {
-        log.Error("Error [%v] querying DB %s", err, db.Name())
-        return 0, err
-    }
-    defer rows.Close()
+	// Exec query
+	rows, err := db.Conn.Query(query)
+	if err != nil {
+		log.Error("Error [%v] querying DB %s", err, db.Name())
+		return 0, err
+	}
+	defer rows.Close()
 
-    result := 0
-    for rows.Next() {
-        rows.Scan(&result)
-    }
+	result := 0
+	for rows.Next() {
+		rows.Scan(&result)
+	}
 
-    return result, nil
+	return result, nil
 }
