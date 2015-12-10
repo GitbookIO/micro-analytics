@@ -14,7 +14,7 @@ type SQLite struct {
 }
 
 func NewSimpleDriver(driverOpts database.DriverOpts) *SQLite {
-	manager := NewManager(ManagerOpts{driverOpts})
+	manager := manager.NewManager(manager.ManagerOpts{driverOpts})
 	return &SQLite{
 		DBManager: manager,
 		directory: driverOpts.Directory,
@@ -23,7 +23,7 @@ func NewSimpleDriver(driverOpts database.DriverOpts) *SQLite {
 
 func (driver *SQLite) Query(params structures.Params) (*structures.Analytics, error) {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
@@ -68,7 +68,7 @@ func (driver *SQLite) Query(params structures.Params) (*structures.Analytics, er
 
 func (driver *SQLite) GroupBy(params structures.Params) (*structures.Aggregates, error) {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
@@ -122,7 +122,7 @@ func (driver *SQLite) GroupBy(params structures.Params) (*structures.Aggregates,
 
 func (driver *SQLite) Series(params structures.Params) (*structures.Intervals, error) {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
@@ -176,7 +176,7 @@ func (driver *SQLite) Series(params structures.Params) (*structures.Intervals, e
 
 func (driver *SQLite) Insert(params structures.Params, analytic structures.Analytic) error {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
@@ -199,7 +199,7 @@ func (driver *SQLite) Insert(params structures.Params, analytic structures.Analy
 
 func (driver *SQLite) Delete(params structures.Params) error {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
