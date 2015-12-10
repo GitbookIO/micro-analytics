@@ -47,23 +47,7 @@ func New(opts Opts) *DBManager {
 	go func() {
 		for {
 			time.Sleep(time.Second * 5)
-
-			nbActive := len(manager.DBs)
-			var err error
-
-			// Limit to 15 test
-			count := 0
-
-			for nbActive > manager.maxDBs && err == nil && count < 15 {
-				count += 1
-				manager.Logger.Info("Cleaning alive connections: %v / %v available", nbActive, manager.maxDBs)
-				err = manager.removeUnpending()
-				nbActive = len(manager.DBs)
-			}
-
-			if err != nil {
-				manager.Logger.Info("%v", err)
-			}
+			manager.cleanConnections()
 		}
 	}()
 
@@ -181,6 +165,22 @@ func (manager *DBManager) removeUnpending() error {
 
 	manager.unregister(manager.DBs[toDelete].Path)
 	return nil
+}
+
+// Ensure number of alive connections drops to maxDBs
+func (manager *DBManager) cleanConnections() {
+	nbActive := len(manager.DBs)
+	var err error
+
+	for nbActive > manager.maxDBs && err == nil {
+		manager.Logger.Info("Cleaning alive connections: %v / %v available", nbActive, manager.maxDBs)
+		err = manager.removeUnpending()
+		nbActive = len(manager.DBs)
+	}
+
+	if err != nil {
+		manager.Logger.Info("%v", err)
+	}
 }
 
 func (manager *DBManager) openOrCreate(dbPath DBPath) (*sql.DB, error) {
