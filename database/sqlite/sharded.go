@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/azer/logger"
+	"github.com/hashicorp/golang-lru"
 
 	"github.com/GitbookIO/micro-analytics/database"
 	"github.com/GitbookIO/micro-analytics/database/errors"
@@ -17,16 +18,26 @@ import (
 type Sharded struct {
 	DBManager *manager.DBManager
 	directory string
+	cache     *lru.Cache
 	logger    *logger.Logger
 }
 
-func NewShardedDriver(driverOpts database.DriverOpts) *Sharded {
+func NewShardedDriver(driverOpts database.DriverOpts) (*Sharded, error) {
 	manager := manager.New(manager.Opts{driverOpts})
-	return &Sharded{
+
+	cache, err := lru.New(driverOpts.CacheSize)
+	if err != nil {
+		return nil, err
+	}
+
+	driver := &Sharded{
 		DBManager: manager,
 		directory: driverOpts.Directory,
+		cache:     cache,
 		logger:    logger.New("[Sharded]"),
 	}
+
+	return driver, nil
 }
 
 func (driver *Sharded) Query(params database.Params) (*database.Analytics, error) {

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/azer/logger"
-	"github.com/hashicorp/golang-lru"
 
 	"github.com/GitbookIO/micro-analytics/database"
 	"github.com/GitbookIO/micro-analytics/utils"
@@ -23,7 +22,6 @@ type DBManager struct {
 	DBs       map[string]*Database
 	StartTime time.Time
 	maxDBs    int
-	Cache     *lru.Cache
 	Logger    *logger.Logger
 }
 
@@ -35,12 +33,6 @@ func New(opts Opts) *DBManager {
 		maxDBs:    opts.MaxDBs,
 		Logger:    logger.New("[DBManager]"),
 	}
-
-	cache, err := lru.New(opts.CacheSize)
-	if err != nil {
-		manager.Logger.Error("Failed to create cache for DBManager: [%v]", err)
-	}
-	manager.Cache = cache
 
 	// Handle cleaning connections
 	// Allow for more than maxDBs to run at full charge
