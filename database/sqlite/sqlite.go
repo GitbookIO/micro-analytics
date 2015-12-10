@@ -157,12 +157,12 @@ func (driver *SQLite) Series(params database.Params) (*database.Intervals, error
 	var analytics *database.Intervals
 
 	if params.Unique {
-		analytics, err = query.OverTimeUniq(db.Conn, params.Interval, params.TimeRange)
+		analytics, err = query.SeriesUniq(db.Conn, params.Interval, params.TimeRange)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
 	} else {
-		analytics, err = query.OverTime(db.Conn, params.Interval, params.TimeRange)
+		analytics, err = query.Series(db.Conn, params.Interval, params.TimeRange)
 		if err != nil {
 			return nil, &errors.InternalError
 		}

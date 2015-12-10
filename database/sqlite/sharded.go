@@ -257,12 +257,12 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 
 		// Check for unique query parameter to call function accordingly
 		if params.Unique {
-			shardAnalytics, err = query.OverTimeUniq(db.Conn, params.Interval, params.TimeRange)
+			shardAnalytics, err = query.SeriesUniq(db.Conn, params.Interval, params.TimeRange)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
 		} else {
-			shardAnalytics, err = query.OverTime(db.Conn, params.Interval, params.TimeRange)
+			shardAnalytics, err = query.Series(db.Conn, params.Interval, params.TimeRange)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
