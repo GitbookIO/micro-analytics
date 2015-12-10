@@ -217,3 +217,5 @@ func (driver *SQLite) Delete(params structures.Params) error {
 	err = driver.DBManager.DeleteDB(dbPath)
 	return err
 }
+
+var _ database.Driver = &SQLite{}

@@ -349,3 +349,5 @@ func TimeToShard(timeValue time.Time) string {
 	layout := "200601"
 	return timeValue.Format(layout)
 }
+
+var _ database.Driver = &Sharded{}
