@@ -3,25 +3,27 @@ package sqlite
 import (
 	"github.com/GitbookIO/micro-analytics/database"
 	"github.com/GitbookIO/micro-analytics/database/errors"
-	"github.com/GitbookIO/micro-analytics/database/structures"
+
+	"github.com/GitbookIO/micro-analytics/database/sqlite/manager"
+	"github.com/GitbookIO/micro-analytics/database/sqlite/query"
 )
 
 type SQLite struct {
-	DBManager *DBManager
+	DBManager *manager.DBManager
 	directory string
 }
 
 func NewSimpleDriver(driverOpts database.DriverOpts) *SQLite {
-	manager := NewManager(ManagerOpts{driverOpts})
+	manager := manager.New(manager.Opts{driverOpts})
 	return &SQLite{
 		DBManager: manager,
 		directory: driverOpts.Directory,
 	}
 }
 
-func (driver *SQLite) Query(params structures.Params) (*structures.Analytics, error) {
+func (driver *SQLite) Query(params database.Params) (*database.Analytics, error) {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
@@ -46,14 +48,14 @@ func (driver *SQLite) Query(params structures.Params) (*structures.Analytics, er
 	// If value is in Cache, return directly
 	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
 	// if inCache {
-	// 	if response, ok := cached.(*structures.Analytics); ok {
+	// 	if response, ok := cached.(*database.Analytics); ok {
 	// 		driver.DBManager.UnlockDB <- NewUnlock(dbPath)
 	// 		return response, nil
 	// 	}
 	// }
 
 	// Return query result
-	analytics, err := db.Query(params.TimeRange)
+	analytics, err := query.Query(db.Conn, params.TimeRange)
 	if err != nil {
 		return nil, &errors.InternalError
 	}
@@ -64,9 +66,9 @@ func (driver *SQLite) Query(params structures.Params) (*structures.Analytics, er
 	return analytics, nil
 }
 
-func (driver *SQLite) GroupBy(params structures.Params) (*structures.Aggregates, error) {
+func (driver *SQLite) GroupBy(params database.Params) (*database.Aggregates, error) {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
@@ -91,22 +93,22 @@ func (driver *SQLite) GroupBy(params structures.Params) (*structures.Aggregates,
 	// If value is in Cache, return directly
 	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
 	// if inCache {
-	// 	if response, ok := cached.(*structures.Aggregates); ok {
+	// 	if response, ok := cached.(*database.Aggregates); ok {
 	// 		driver.DBManager.UnlockDB <- NewUnlock(dbPath)
 	// 		return response, nil
 	// 	}
 	// }
 
 	// Check for unique query parameter to call function accordingly
-	var analytics *structures.Aggregates
+	var analytics *database.Aggregates
 
 	if params.Unique {
-		analytics, err = db.GroupByUniq(params.Property, params.TimeRange)
+		analytics, err = query.GroupByUniq(db.Conn, params.Property, params.TimeRange)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
 	} else {
-		analytics, err = db.GroupBy(params.Property, params.TimeRange)
+		analytics, err = query.GroupBy(db.Conn, params.Property, params.TimeRange)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
@@ -118,9 +120,9 @@ func (driver *SQLite) GroupBy(params structures.Params) (*structures.Aggregates,
 	return analytics, nil
 }
 
-func (driver *SQLite) OverTime(params structures.Params) (*structures.Intervals, error) {
+func (driver *SQLite) Series(params database.Params) (*database.Intervals, error) {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
@@ -145,22 +147,22 @@ func (driver *SQLite) OverTime(params structures.Params) (*structures.Intervals,
 	// If value is in Cache, return directly
 	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
 	// if inCache {
-	// 	if response, ok := cached.(*structures.Intervals); ok {
+	// 	if response, ok := cached.(*database.Intervals); ok {
 	// 		driver.DBManager.UnlockDB <- NewUnlock(dbPath)
 	// 		return response, nil
 	// 	}
 	// }
 
 	// Check for unique query parameter to call function accordingly
-	var analytics *structures.Intervals
+	var analytics *database.Intervals
 
 	if params.Unique {
-		analytics, err = db.OverTimeUniq(params.Interval, params.TimeRange)
+		analytics, err = query.SeriesUniq(db.Conn, params.Interval, params.TimeRange)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
 	} else {
-		analytics, err = db.OverTime(params.Interval, params.TimeRange)
+		analytics, err = query.Series(db.Conn, params.Interval, params.TimeRange)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
@@ -172,9 +174,9 @@ func (driver *SQLite) OverTime(params structures.Params) (*structures.Intervals,
 	return analytics, nil
 }
 
-func (driver *SQLite) Push(params structures.Params, analytic structures.Analytic) error {
+func (driver *SQLite) Insert(params database.Params, analytic database.Analytic) error {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
@@ -186,7 +188,7 @@ func (driver *SQLite) Push(params structures.Params, analytic structures.Analyti
 	}
 
 	// Insert data if everything's OK
-	err = db.Insert(analytic)
+	err = query.Insert(db.Conn, analytic)
 
 	if err != nil {
 		return &errors.InsertFailed
@@ -195,9 +197,9 @@ func (driver *SQLite) Push(params structures.Params, analytic structures.Analyti
 	return nil
 }
 
-func (driver *SQLite) Delete(params structures.Params) error {
+func (driver *SQLite) Delete(params database.Params) error {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
@@ -217,3 +219,5 @@ func (driver *SQLite) Delete(params structures.Params) error {
 	err = driver.DBManager.DeleteDB(dbPath)
 	return err
 }
+
+var _ database.Driver = &SQLite{}

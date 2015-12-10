@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"io/ioutil"
 	"strconv"
 	"time"
 
@@ -8,17 +9,19 @@ import (
 
 	"github.com/GitbookIO/micro-analytics/database"
 	"github.com/GitbookIO/micro-analytics/database/errors"
-	"github.com/GitbookIO/micro-analytics/database/structures"
+
+	"github.com/GitbookIO/micro-analytics/database/sqlite/manager"
+	"github.com/GitbookIO/micro-analytics/database/sqlite/query"
 )
 
 type Sharded struct {
-	DBManager *DBManager
+	DBManager *manager.DBManager
 	directory string
 	logger    *logger.Logger
 }
 
 func NewShardedDriver(driverOpts database.DriverOpts) *Sharded {
-	manager := NewManager(ManagerOpts{driverOpts})
+	manager := manager.New(manager.Opts{driverOpts})
 	return &Sharded{
 		DBManager: manager,
 		directory: driverOpts.Directory,
@@ -26,9 +29,9 @@ func NewShardedDriver(driverOpts database.DriverOpts) *Sharded {
 	}
 }
 
-func (driver *Sharded) Query(params structures.Params) (*structures.Analytics, error) {
+func (driver *Sharded) Query(params database.Params) (*database.Analytics, error) {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
@@ -46,8 +49,8 @@ func (driver *Sharded) Query(params structures.Params) (*structures.Analytics, e
 
 	// At this point, there should be shards to query
 	// Get list of shards by reading directory
-	shards := ListShards(dbPath)
-	analytics := structures.Analytics{}
+	shards := listShards(dbPath)
+	analytics := database.Analytics{}
 
 	// Read from each shard
 	for _, shard := range shards {
@@ -57,13 +60,13 @@ func (driver *Sharded) Query(params structures.Params) (*structures.Analytics, e
 			driver.logger.Error("Error [%v] converting shard %s name to an integer", err, shard)
 		}
 
-		startInt, endInt := params.TimeRange.ConvertToInt()
+		startInt, endInt := convertToInt(params.TimeRange)
 		if shardInt < startInt || shardInt > endInt {
 			continue
 		}
 
 		// Construct each shard DBPath
-		shardPath := DBPath{
+		shardPath := manager.DBPath{
 			Name:      shard,
 			Directory: dbPath.String(),
 		}
@@ -75,7 +78,7 @@ func (driver *Sharded) Query(params structures.Params) (*structures.Analytics, e
 		}
 
 		// Return query result
-		shardAnalytics, err := db.Query(params.TimeRange)
+		shardAnalytics, err := query.Query(db.Conn, params.TimeRange)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
@@ -89,7 +92,7 @@ func (driver *Sharded) Query(params structures.Params) (*structures.Analytics, e
 	// // If value is in Cache, return directly
 	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
 	// if inCache {
-	// 	if response, ok := cached.(*structures.Analytics); ok {
+	// 	if response, ok := cached.(*database.Analytics); ok {
 	// 		driver.DBManager.UnlockDB <- dbPath
 	// 		return response, nil
 	// 	}
@@ -101,9 +104,9 @@ func (driver *Sharded) Query(params structures.Params) (*structures.Analytics, e
 	return &analytics, nil
 }
 
-func (driver *Sharded) GroupBy(params structures.Params) (*structures.Aggregates, error) {
+func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, error) {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
@@ -121,12 +124,12 @@ func (driver *Sharded) GroupBy(params structures.Params) (*structures.Aggregates
 
 	// At this point, there should be shards to query
 	// Get list of shards by reading directory
-	shards := ListShards(dbPath)
+	shards := listShards(dbPath)
 
 	// Aggregated query result
-	analytics := structures.Aggregates{}
+	analytics := database.Aggregates{}
 	// Helper map to aggregate
-	analyticsMap := map[string]structures.Aggregate{}
+	analyticsMap := map[string]database.Aggregate{}
 
 	// Read from each shard
 	for _, shard := range shards {
@@ -136,13 +139,13 @@ func (driver *Sharded) GroupBy(params structures.Params) (*structures.Aggregates
 			driver.logger.Error("Error [%v] converting shard %s name to an integer", err, shard)
 		}
 
-		startInt, endInt := params.TimeRange.ConvertToInt()
+		startInt, endInt := convertToInt(params.TimeRange)
 		if shardInt < startInt || shardInt > endInt {
 			continue
 		}
 
 		// Construct each shard DBPath
-		shardPath := DBPath{
+		shardPath := manager.DBPath{
 			Name:      shard,
 			Directory: dbPath.String(),
 		}
@@ -153,16 +156,16 @@ func (driver *Sharded) GroupBy(params structures.Params) (*structures.Aggregates
 			return nil, &errors.InternalError
 		}
 
-		var shardAnalytics *structures.Aggregates
+		var shardAnalytics *database.Aggregates
 
 		// Check for unique query parameter to call function accordingly
 		if params.Unique {
-			shardAnalytics, err = db.GroupByUniq(params.Property, params.TimeRange)
+			shardAnalytics, err = query.GroupByUniq(db.Conn, params.Property, params.TimeRange)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
 		} else {
-			shardAnalytics, err = db.GroupBy(params.Property, params.TimeRange)
+			shardAnalytics, err = query.GroupBy(db.Conn, params.Property, params.TimeRange)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
@@ -188,7 +191,7 @@ func (driver *Sharded) GroupBy(params structures.Params) (*structures.Aggregates
 	// // If value is in Cache, return directly
 	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
 	// if inCache {
-	// 	if response, ok := cached.(*structures.Aggregates); ok {
+	// 	if response, ok := cached.(*database.Aggregates); ok {
 	// 		driver.DBManager.UnlockDB <- dbPath
 	// 		return response, nil
 	// 	}
@@ -200,9 +203,9 @@ func (driver *Sharded) GroupBy(params structures.Params) (*structures.Aggregates
 	return &analytics, nil
 }
 
-func (driver *Sharded) OverTime(params structures.Params) (*structures.Intervals, error) {
+func (driver *Sharded) Series(params database.Params) (*database.Intervals, error) {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
@@ -220,10 +223,10 @@ func (driver *Sharded) OverTime(params structures.Params) (*structures.Intervals
 
 	// At this point, there should be shards to query
 	// Get list of shards by reading directory
-	shards := ListShards(dbPath)
+	shards := listShards(dbPath)
 
 	// Aggregated query result
-	analytics := structures.Intervals{}
+	analytics := database.Intervals{}
 
 	// Read from each shard
 	for _, shard := range shards {
@@ -233,13 +236,13 @@ func (driver *Sharded) OverTime(params structures.Params) (*structures.Intervals
 			driver.logger.Error("Error [%v] converting shard %s name to an integer", err, shard)
 		}
 
-		startInt, endInt := params.TimeRange.ConvertToInt()
+		startInt, endInt := convertToInt(params.TimeRange)
 		if shardInt < startInt || shardInt > endInt {
 			continue
 		}
 
 		// Construct each shard DBPath
-		shardPath := DBPath{
+		shardPath := manager.DBPath{
 			Name:      shard,
 			Directory: dbPath.String(),
 		}
@@ -250,16 +253,16 @@ func (driver *Sharded) OverTime(params structures.Params) (*structures.Intervals
 			return nil, &errors.InternalError
 		}
 
-		var shardAnalytics *structures.Intervals
+		var shardAnalytics *database.Intervals
 
 		// Check for unique query parameter to call function accordingly
 		if params.Unique {
-			shardAnalytics, err = db.OverTimeUniq(params.Interval, params.TimeRange)
+			shardAnalytics, err = query.SeriesUniq(db.Conn, params.Interval, params.TimeRange)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
 		} else {
-			shardAnalytics, err = db.OverTime(params.Interval, params.TimeRange)
+			shardAnalytics, err = query.Series(db.Conn, params.Interval, params.TimeRange)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
@@ -274,7 +277,7 @@ func (driver *Sharded) OverTime(params structures.Params) (*structures.Intervals
 	// // If value is in Cache, return directly
 	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
 	// if inCache {
-	// 	if response, ok := cached.(*structures.Intervals); ok {
+	// 	if response, ok := cached.(*database.Intervals); ok {
 	// 		driver.DBManager.UnlockDB <- dbPath
 	// 		return response, nil
 	// 	}
@@ -286,18 +289,18 @@ func (driver *Sharded) OverTime(params structures.Params) (*structures.Intervals
 	return &analytics, nil
 }
 
-func (driver *Sharded) Push(params structures.Params, analytic structures.Analytic) error {
+func (driver *Sharded) Insert(params database.Params, analytic database.Analytic) error {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
 
 	// Push to right shard based on analytic time
-	shardName := TimeToShard(analytic.Time)
+	shardName := timeToShard(analytic.Time)
 
 	// Construct shard DBPath
-	shardPath := DBPath{
+	shardPath := manager.DBPath{
 		Name:      shardName,
 		Directory: dbPath.String(),
 	}
@@ -311,7 +314,7 @@ func (driver *Sharded) Push(params structures.Params, analytic structures.Analyt
 
 	driver.logger.Info("Inserting in DB %s", shardPath)
 	// Insert data if everything's OK
-	err = db.Insert(analytic)
+	err = query.Insert(db.Conn, analytic)
 
 	if err != nil {
 		return &errors.InsertFailed
@@ -320,9 +323,9 @@ func (driver *Sharded) Push(params structures.Params, analytic structures.Analyt
 	return nil
 }
 
-func (driver *Sharded) Delete(params structures.Params) error {
+func (driver *Sharded) Delete(params database.Params) error {
 	// Construct DBPath
-	dbPath := DBPath{
+	dbPath := manager.DBPath{
 		Name:      params.DBName,
 		Directory: driver.directory,
 	}
@@ -345,7 +348,52 @@ func (driver *Sharded) Delete(params structures.Params) error {
 
 // Convert a time to a shard name
 // 2015-12-08T00:00:00.000Z -> 201512
-func TimeToShard(timeValue time.Time) string {
+func timeToShard(timeValue time.Time) string {
 	layout := "200601"
 	return timeValue.Format(layout)
 }
+
+func listShards(dbPath manager.DBPath) []string {
+	folders, err := ioutil.ReadDir(dbPath.String())
+	if err != nil {
+		return nil
+	}
+
+	shards := make([]string, 0)
+	for _, folder := range folders {
+		shards = append(shards, folder.Name())
+	}
+
+	return shards
+}
+
+// Helper function to return start and end time as an int in YYYYMM format
+// Defaults to 0 for Start and 999999 for End
+func convertToInt(timeRange *database.TimeRange) (int, int) {
+	var err error
+	layout := "200601"
+
+	startDefault := 0
+	startInt := 0
+	endDefault := 999999
+	endInt := 999999
+
+	if timeRange != nil {
+		if !timeRange.Start.Equal(time.Time{}) {
+			startInt, err = strconv.Atoi(timeRange.Start.Format(layout))
+			if err != nil {
+				startInt = startDefault
+			}
+		}
+		if !timeRange.End.Equal(time.Time{}) {
+			endInt, err = strconv.Atoi(timeRange.End.Format(layout))
+			if err != nil {
+				endInt = endDefault
+			}
+		}
+	}
+
+	return startInt, endInt
+}
+
+var _ database.Driver = &Sharded{}
