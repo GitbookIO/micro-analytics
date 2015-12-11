@@ -63,9 +63,11 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 	// Get list of shards by reading directory
 	shards := listShards(dbPath)
 	analytics := database.Analytics{}
+	cachedRequest := cachedRequest(params.URL)
 
 	// Read from each shard
 	for _, shardName := range shards {
+
 		// Don't include shard if not in timerange
 		shardInt, err := shardNameToInt(shardName)
 		if err != nil {
@@ -112,7 +114,7 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 			}
 
 			// Set shard result in cache if asked
-			if cachedRequest(params.URL) {
+			if cachedRequest {
 				driver.cache.Add(cacheURL, shardAnalytics)
 			}
 		}
@@ -344,13 +346,11 @@ func (driver *Sharded) Insert(params database.Params, analytic database.Analytic
 	}
 
 	// Get DB from manager
-	driver.logger.Info("Request for DB %s", shardPath)
 	db, err := driver.DBManager.GetDB(shardPath)
 	if err != nil {
 		return &errors.InternalError
 	}
 
-	driver.logger.Info("Inserting in DB %s", shardPath)
 	// Insert data if everything's OK
 	err = query.Insert(db.Conn, analytic)
 
@@ -467,8 +467,14 @@ func formatURLForCache(uRL *url.URL, shardName int, startMonth int, endMonth int
 		queryParams.Del("cache")
 	}
 
-	uRL.RawQuery = queryParams.Encode()
-	return uRL.String(), nil
+	// Add shard=shardName query parameter
+	queryParams.Add("shard", strconv.Itoa(shardName))
+
+	// Create new modified URL
+	cacheURL := *uRL
+	cacheURL.RawQuery = queryParams.Encode()
+
+	return cacheURL.String(), nil
 }
 
 // Return true if cache query parameter passed
