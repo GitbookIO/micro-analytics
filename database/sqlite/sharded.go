@@ -198,7 +198,9 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 			}
 
 			// Set shard result in cache if asked
-			driver.cache.Add(cacheURL, shardAnalytics)
+			if cachedRequest(params.URL) {
+				driver.cache.Add(cacheURL, shardAnalytics)
+			}
 		}
 
 		// Add shard result to analyticsMap
@@ -449,6 +451,13 @@ func formatURLForCache(uRL *url.URL, shardName int, startMonth int, endMonth int
 
 	uRL.RawQuery = queryParams.Encode()
 	return uRL.String(), nil
+}
+
+// Return true if cache query parameter passed
+func cachedRequest(uRL *url.URL) bool {
+	// Extract query parameters
+	queryParams := uRL.Query()
+	return len(queryParams.Get("cache")) > 0
 }
 
 var _ database.Driver = &Sharded{}
