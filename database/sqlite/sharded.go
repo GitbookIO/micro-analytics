@@ -72,7 +72,7 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 			driver.logger.Error("Error [%v] converting shard %s name to an integer", err, shard)
 		}
 
-		startInt, endInt := convertToInt(params.TimeRange)
+		startInt, endInt := timeRangeToInt(params.TimeRange)
 		if shardInt < startInt || shardInt > endInt {
 			continue
 		}
@@ -151,7 +151,7 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 			return nil, err
 		}
 
-		startInt, endInt := convertToInt(params.TimeRange)
+		startInt, endInt := timeRangeToInt(params.TimeRange)
 		if shardInt < startInt || shardInt > endInt {
 			continue
 		}
@@ -254,7 +254,7 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 			driver.logger.Error("Error [%v] converting shard %s name to an integer", err, shard)
 		}
 
-		startInt, endInt := convertToInt(params.TimeRange)
+		startInt, endInt := timeRangeToInt(params.TimeRange)
 		if shardInt < startInt || shardInt > endInt {
 			continue
 		}
@@ -315,7 +315,7 @@ func (driver *Sharded) Insert(params database.Params, analytic database.Analytic
 	}
 
 	// Push to right shard based on analytic time
-	shardName := timeToShard(analytic.Time)
+	shardName := timeToShardName(analytic.Time)
 
 	// Construct shard DBPath
 	shardPath := manager.DBPath{
@@ -366,7 +366,7 @@ func (driver *Sharded) Delete(params database.Params) error {
 
 // Convert a time to a shard name
 // 2015-12-08T00:00:00.000Z -> 201512
-func timeToShard(timeValue time.Time) string {
+func timeToShardName(timeValue time.Time) string {
 	layout := "200601"
 	return timeValue.Format(layout)
 }
@@ -394,7 +394,7 @@ func listShards(dbPath manager.DBPath) []string {
 
 // Helper function to return start and end time as an int in YYYYMM format
 // Defaults to 0 for Start and 999999 for End
-func convertToInt(timeRange *database.TimeRange) (int, int) {
+func timeRangeToInt(timeRange *database.TimeRange) (int, int) {
 	var err error
 	layout := "200601"
 
@@ -438,7 +438,7 @@ func formatURLForCache(uRL *url.URL, shardName int, startMonth int, endMonth int
 	}
 
 	// Remove cache for months before current month
-	currentMonth, err := shardNameToInt(timeToShard(time.Now()))
+	currentMonth, err := shardNameToInt(timeToShardName(time.Now()))
 	if err != nil {
 		return "", err
 	}
