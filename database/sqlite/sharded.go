@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/azer/logger"
 	"github.com/hashicorp/golang-lru"
 
 	"github.com/GitbookIO/micro-analytics/database"
@@ -20,7 +19,6 @@ type Sharded struct {
 	DBManager *manager.DBManager
 	directory string
 	cache     *lru.Cache
-	logger    *logger.Logger
 }
 
 func NewShardedDriver(driverOpts database.DriverOpts) (*Sharded, error) {
@@ -35,7 +33,6 @@ func NewShardedDriver(driverOpts database.DriverOpts) (*Sharded, error) {
 		DBManager: manager,
 		directory: driverOpts.Directory,
 		cache:     cache,
-		logger:    logger.New("[Sharded]"),
 	}
 
 	return driver, nil

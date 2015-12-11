@@ -45,23 +45,11 @@ func (driver *SQLite) Query(params database.Params) (*database.Analytics, error)
 		return nil, &errors.InternalError
 	}
 
-	// If value is in Cache, return directly
-	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
-	// if inCache {
-	// 	if response, ok := cached.(*database.Analytics); ok {
-	// 		driver.DBManager.UnlockDB <- NewUnlock(dbPath)
-	// 		return response, nil
-	// 	}
-	// }
-
 	// Return query result
 	analytics, err := query.Query(db.Conn, params.TimeRange)
 	if err != nil {
 		return nil, &errors.InternalError
 	}
-
-	// Store response in Cache before sending
-	// driver.DBManager.Cache.Add(params.URL, analytics)
 
 	return analytics, nil
 }
@@ -90,15 +78,6 @@ func (driver *SQLite) GroupBy(params database.Params) (*database.Aggregates, err
 		return nil, &errors.InternalError
 	}
 
-	// If value is in Cache, return directly
-	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
-	// if inCache {
-	// 	if response, ok := cached.(*database.Aggregates); ok {
-	// 		driver.DBManager.UnlockDB <- NewUnlock(dbPath)
-	// 		return response, nil
-	// 	}
-	// }
-
 	// Check for unique query parameter to call function accordingly
 	var analytics *database.Aggregates
 
@@ -113,9 +92,6 @@ func (driver *SQLite) GroupBy(params database.Params) (*database.Aggregates, err
 			return nil, &errors.InternalError
 		}
 	}
-
-	// Store response in Cache before sending
-	// driver.DBManager.Cache.Add(params.URL, analytics)
 
 	return analytics, nil
 }
@@ -144,15 +120,6 @@ func (driver *SQLite) Series(params database.Params) (*database.Intervals, error
 		return nil, &errors.InternalError
 	}
 
-	// If value is in Cache, return directly
-	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
-	// if inCache {
-	// 	if response, ok := cached.(*database.Intervals); ok {
-	// 		driver.DBManager.UnlockDB <- NewUnlock(dbPath)
-	// 		return response, nil
-	// 	}
-	// }
-
 	// Check for unique query parameter to call function accordingly
 	var analytics *database.Intervals
 
@@ -167,9 +134,6 @@ func (driver *SQLite) Series(params database.Params) (*database.Intervals, error
 			return nil, &errors.InternalError
 		}
 	}
-
-	// Store response in Cache before sending
-	// driver.DBManager.Cache.Add(params.URL, analytics)
 
 	return analytics, nil
 }
