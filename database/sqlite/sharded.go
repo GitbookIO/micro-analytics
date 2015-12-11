@@ -155,6 +155,8 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 	// Helper map to aggregate
 	analyticsMap := map[string]database.Aggregate{}
 
+	cachedRequest := cachedRequest(params.URL)
+
 	// Read from each shard
 	for _, shardName := range shards {
 		// Don't include shard if not in timerange
@@ -210,7 +212,7 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 			}
 
 			// Set shard result in cache if asked
-			if cachedRequest(params.URL) {
+			if cachedRequest {
 				driver.cache.Add(cacheURL, shardAnalytics)
 			}
 		}
@@ -259,6 +261,8 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 
 	// Aggregated query result
 	analytics := database.Intervals{}
+
+	cachedRequest := cachedRequest(params.URL)
 
 	// Read from each shard
 	for _, shardName := range shards {
@@ -315,7 +319,7 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 			}
 
 			// Set shard result in cache if asked
-			if cachedRequest(params.URL) {
+			if cachedRequest {
 				driver.cache.Add(cacheURL, shardAnalytics)
 			}
 		}
