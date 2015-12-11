@@ -77,22 +77,44 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 			continue
 		}
 
-		// Construct each shard DBPath
-		shardPath := manager.DBPath{
-			Name:      shard,
-			Directory: dbPath.String(),
+		// Get result if is cached
+		var shardAnalytics *database.Analytics
+
+		cacheURL, err := formatURLForCache(params.URL, shardInt, startInt, endInt)
+		if err != nil {
+			return nil, err
 		}
 
-		// Get DB shard from manager
-		db, err := driver.DBManager.GetDB(shardPath)
-		if err != nil {
-			return nil, &errors.InternalError
-		}
+		cached, inCache := driver.cache.Get(cacheURL)
+		if inCache {
+			var ok bool
+			if shardAnalytics, ok = cached.(*database.Analytics); !ok {
+				return nil, &errors.InternalError
+			}
+		} else {
+			// Else query shard
+			// Construct each shard DBPath
+			shardPath := manager.DBPath{
+				Name:      shard,
+				Directory: dbPath.String(),
+			}
 
-		// Return query result
-		shardAnalytics, err := query.Query(db.Conn, params.TimeRange)
-		if err != nil {
-			return nil, &errors.InternalError
+			// Get DB shard from manager
+			db, err := driver.DBManager.GetDB(shardPath)
+			if err != nil {
+				return nil, &errors.InternalError
+			}
+
+			// Return query result
+			shardAnalytics, err = query.Query(db.Conn, params.TimeRange)
+			if err != nil {
+				return nil, &errors.InternalError
+			}
+
+			// Set shard result in cache if asked
+			if cachedRequest(params.URL) {
+				driver.cache.Add(cacheURL, shardAnalytics)
+			}
 		}
 
 		// Add shard result to analytics
@@ -100,18 +122,6 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 			analytics.List = append(analytics.List, analytic)
 		}
 	}
-
-	// // If value is in Cache, return directly
-	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
-	// if inCache {
-	// 	if response, ok := cached.(*database.Analytics); ok {
-	// 		driver.DBManager.UnlockDB <- dbPath
-	// 		return response, nil
-	// 	}
-	// }
-
-	// // Store response in Cache before sending
-	// driver.DBManager.Cache.Add(params.URL, analytics)
 
 	return &analytics, nil
 }
@@ -261,30 +271,50 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 			continue
 		}
 
-		// Construct each shard DBPath
-		shardPath := manager.DBPath{
-			Name:      shard,
-			Directory: dbPath.String(),
-		}
-
-		// Get DB shard from manager
-		db, err := driver.DBManager.GetDB(shardPath)
-		if err != nil {
-			return nil, &errors.InternalError
-		}
-
+		// Get result if is cached
 		var shardAnalytics *database.Intervals
 
-		// Check for unique query parameter to call function accordingly
-		if params.Unique {
-			shardAnalytics, err = query.SeriesUniq(db.Conn, params.Interval, params.TimeRange)
-			if err != nil {
+		cacheURL, err := formatURLForCache(params.URL, shardInt, startInt, endInt)
+		if err != nil {
+			return nil, err
+		}
+
+		cached, inCache := driver.cache.Get(cacheURL)
+		if inCache {
+			var ok bool
+			if shardAnalytics, ok = cached.(*database.Intervals); !ok {
 				return nil, &errors.InternalError
 			}
 		} else {
-			shardAnalytics, err = query.Series(db.Conn, params.Interval, params.TimeRange)
+			// Else query shard
+			// Construct each shard DBPath
+			shardPath := manager.DBPath{
+				Name:      shard,
+				Directory: dbPath.String(),
+			}
+
+			// Get DB shard from manager
+			db, err := driver.DBManager.GetDB(shardPath)
 			if err != nil {
 				return nil, &errors.InternalError
+			}
+
+			// Check for unique query parameter to call function accordingly
+			if params.Unique {
+				shardAnalytics, err = query.SeriesUniq(db.Conn, params.Interval, params.TimeRange)
+				if err != nil {
+					return nil, &errors.InternalError
+				}
+			} else {
+				shardAnalytics, err = query.Series(db.Conn, params.Interval, params.TimeRange)
+				if err != nil {
+					return nil, &errors.InternalError
+				}
+			}
+
+			// Set shard result in cache if asked
+			if cachedRequest(params.URL) {
+				driver.cache.Add(cacheURL, shardAnalytics)
 			}
 		}
 
@@ -293,18 +323,6 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 			analytics.List = append(analytics.List, analytic)
 		}
 	}
-
-	// // If value is in Cache, return directly
-	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
-	// if inCache {
-	// 	if response, ok := cached.(*database.Intervals); ok {
-	// 		driver.DBManager.UnlockDB <- dbPath
-	// 		return response, nil
-	// 	}
-	// }
-
-	// // Store response in Cache before sending
-	// driver.DBManager.Cache.Add(params.URL, analytics)
 
 	return &analytics, nil
 }
