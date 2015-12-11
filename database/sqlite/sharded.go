@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"io/ioutil"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -155,31 +156,44 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 			continue
 		}
 
-		// Construct each shard DBPath
-		shardPath := manager.DBPath{
-			Name:      shard,
-			Directory: dbPath.String(),
-		}
-
-		// Get DB shard from manager
-		db, err := driver.DBManager.GetDB(shardPath)
-		if err != nil {
-			return nil, &errors.InternalError
-		}
-
+		// Get result if is cached
 		var shardAnalytics *database.Aggregates
 
-		// Check for unique query parameter to call function accordingly
-		if params.Unique {
-			shardAnalytics, err = query.GroupByUniq(db.Conn, params.Property, params.TimeRange)
-			if err != nil {
+		cached, inCache := driver.cache.Get(formatURLForCache(params.URL, shardInt, startInt, endInt))
+		if inCache {
+			var ok bool
+			if shardAnalytics, ok = cached.(*database.Aggregates); !ok {
 				return nil, &errors.InternalError
 			}
 		} else {
-			shardAnalytics, err = query.GroupBy(db.Conn, params.Property, params.TimeRange)
+			// Else query shard
+			// Construct each shard DBPath
+			shardPath := manager.DBPath{
+				Name:      shard,
+				Directory: dbPath.String(),
+			}
+
+			// Get DB shard from manager
+			db, err := driver.DBManager.GetDB(shardPath)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
+
+			// Check for unique query parameter to call function accordingly
+			if params.Unique {
+				shardAnalytics, err = query.GroupByUniq(db.Conn, params.Property, params.TimeRange)
+				if err != nil {
+					return nil, &errors.InternalError
+				}
+			} else {
+				shardAnalytics, err = query.GroupBy(db.Conn, params.Property, params.TimeRange)
+				if err != nil {
+					return nil, &errors.InternalError
+				}
+			}
+
+			// Set shard result in cache if asked
+			driver.cache.Add(formatURLForCache(params.URL, shardInt, startInt, endInt))
 		}
 
 		// Add shard result to analyticsMap
@@ -198,18 +212,6 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 	for _, analytic := range analyticsMap {
 		analytics.List = append(analytics.List, analytic)
 	}
-
-	// // If value is in Cache, return directly
-	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
-	// if inCache {
-	// 	if response, ok := cached.(*database.Aggregates); ok {
-	// 		driver.DBManager.UnlockDB <- dbPath
-	// 		return response, nil
-	// 	}
-	// }
-
-	// // Store response in Cache before sending
-	// driver.DBManager.Cache.Add(params.URL, analytics)
 
 	return &analytics, nil
 }
@@ -405,6 +407,40 @@ func convertToInt(timeRange *database.TimeRange) (int, int) {
 	}
 
 	return startInt, endInt
+}
+
+// Format URL for a specific shard
+// Basically, remove start/end if is is before/after shard time
+func formatURLForCache(rawURL string, shardName int, startMonth int, endMonth int) (string, error) {
+	// Parse URL and get query parameters
+	uRL, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, err
+	}
+
+	queryParams, err := uRL.Query()
+	if err != nil {
+		return nil, err
+	}
+
+	// Remove start
+	if startMonth < shardName {
+		queryParams.Del("start")
+	}
+
+	// Remove end
+	if endMonth > shardName {
+		queryParams.Del("end")
+	}
+
+	// Remove cache for months before current month
+	currentMonth := timeToShard(time.Now())
+	if shardName < currentMonth {
+		queryParams.Del("cache")
+	}
+
+	uRL.RawQuery = queryParams.Encode()
+	return uRL.String()
 }
 
 var _ database.Driver = &Sharded{}
