@@ -105,7 +105,9 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 			}
 
 			// Return query result
+			db.Lock()
 			shardAnalytics, err = query.Query(db.Conn, params.TimeRange)
+			db.Unlock()
 			if err != nil {
 				return nil, &errors.InternalError
 			}
@@ -197,12 +199,16 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 
 			// Check for unique query parameter to call function accordingly
 			if params.Unique {
+				db.Lock()
 				shardAnalytics, err = query.GroupByUniq(db.Conn, params.Property, params.TimeRange)
+				db.Unlock()
 				if err != nil {
 					return nil, &errors.InternalError
 				}
 			} else {
+				db.Lock()
 				shardAnalytics, err = query.GroupBy(db.Conn, params.Property, params.TimeRange)
+				db.Unlock()
 				if err != nil {
 					return nil, &errors.InternalError
 				}
@@ -304,7 +310,9 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 
 			// Check for unique query parameter to call function accordingly
 			if params.Unique {
+				db.Lock()
 				shardAnalytics, err = query.SeriesUniq(db.Conn, params.Interval, params.TimeRange)
+				db.Unlock()
 				if err != nil {
 					return nil, &errors.InternalError
 				}
@@ -353,7 +361,9 @@ func (driver *Sharded) Insert(params database.Params, analytic database.Analytic
 	}
 
 	// Insert data if everything's OK
+	db.Lock()
 	err = query.Insert(db.Conn, analytic)
+	db.Unlock()
 
 	if err != nil {
 		return &errors.InsertFailed
