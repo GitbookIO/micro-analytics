@@ -65,11 +65,11 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 	analytics := database.Analytics{}
 
 	// Read from each shard
-	for _, shard := range shards {
+	for _, shardName := range shards {
 		// Don't include shard if not in timerange
-		shardInt, err := strconv.Atoi(shard)
+		shardInt, err := shardNameToInt(shardName)
 		if err != nil {
-			driver.logger.Error("Error [%v] converting shard %s name to an integer", err, shard)
+			return nil, err
 		}
 
 		startInt, endInt := timeRangeToInt(params.TimeRange)
@@ -154,9 +154,9 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 	analyticsMap := map[string]database.Aggregate{}
 
 	// Read from each shard
-	for _, shard := range shards {
+	for _, shardName := range shards {
 		// Don't include shard if not in timerange
-		shardInt, err := shardNameToInt(shard)
+		shardInt, err := shardNameToInt(shardName)
 		if err != nil {
 			return nil, err
 		}
@@ -259,11 +259,11 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 	analytics := database.Intervals{}
 
 	// Read from each shard
-	for _, shard := range shards {
+	for _, shardName := range shards {
 		// Don't include shard if not in timerange
-		shardInt, err := strconv.Atoi(shard)
+		shardInt, err := shardNameToInt(shardName)
 		if err != nil {
-			driver.logger.Error("Error [%v] converting shard %s name to an integer", err, shard)
+			return nil, err
 		}
 
 		startInt, endInt := timeRangeToInt(params.TimeRange)
