@@ -146,9 +146,9 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 	// Read from each shard
 	for _, shard := range shards {
 		// Don't include shard if not in timerange
-		shardInt, err := strconv.Atoi(shard)
+		shardInt, err := shardNameToInt(shard)
 		if err != nil {
-			driver.logger.Error("Error [%v] converting shard %s name to an integer", err, shard)
+			return nil, err
 		}
 
 		startInt, endInt := convertToInt(params.TimeRange)
@@ -159,7 +159,12 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 		// Get result if is cached
 		var shardAnalytics *database.Aggregates
 
-		cached, inCache := driver.cache.Get(formatURLForCache(params.URL, shardInt, startInt, endInt))
+		cacheURL, err := formatURLForCache(params.URL, shardInt, startInt, endInt)
+		if err != nil {
+			return nil, err
+		}
+
+		cached, inCache := driver.cache.Get(cacheURL)
 		if inCache {
 			var ok bool
 			if shardAnalytics, ok = cached.(*database.Aggregates); !ok {
@@ -193,7 +198,7 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 			}
 
 			// Set shard result in cache if asked
-			driver.cache.Add(formatURLForCache(params.URL, shardInt, startInt, endInt))
+			driver.cache.Add(cacheURL, shardAnalytics)
 		}
 
 		// Add shard result to analyticsMap
@@ -366,6 +371,13 @@ func timeToShard(timeValue time.Time) string {
 	return timeValue.Format(layout)
 }
 
+// Convert a shard name to an int
+func shardNameToInt(shardName string) (int, error) {
+	shardInt, err := strconv.Atoi(shardName)
+	return shardInt, err
+}
+
+// Return the list of all shards in a DBPath
 func listShards(dbPath manager.DBPath) []string {
 	folders, err := ioutil.ReadDir(dbPath.String())
 	if err != nil {
@@ -411,17 +423,9 @@ func convertToInt(timeRange *database.TimeRange) (int, int) {
 
 // Format URL for a specific shard
 // Basically, remove start/end if is is before/after shard time
-func formatURLForCache(rawURL string, shardName int, startMonth int, endMonth int) (string, error) {
-	// Parse URL and get query parameters
-	uRL, err := url.Parse(rawURL)
-	if err != nil {
-		return nil, err
-	}
-
-	queryParams, err := uRL.Query()
-	if err != nil {
-		return nil, err
-	}
+func formatURLForCache(uRL *url.URL, shardName int, startMonth int, endMonth int) (string, error) {
+	// Extract URL query parameters
+	queryParams := uRL.Query()
 
 	// Remove start
 	if startMonth < shardName {
@@ -434,13 +438,17 @@ func formatURLForCache(rawURL string, shardName int, startMonth int, endMonth in
 	}
 
 	// Remove cache for months before current month
-	currentMonth := timeToShard(time.Now())
+	currentMonth, err := shardNameToInt(timeToShard(time.Now()))
+	if err != nil {
+		return "", err
+	}
+
 	if shardName < currentMonth {
 		queryParams.Del("cache")
 	}
 
 	uRL.RawQuery = queryParams.Encode()
-	return uRL.String()
+	return uRL.String(), nil
 }
 
 var _ database.Driver = &Sharded{}

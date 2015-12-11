@@ -107,7 +107,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 			Interval:  interval,
 			TimeRange: timeRange,
 			Unique:    unique,
-			URL:       req.URL.String(),
+			URL:       req.URL,
 		}
 
 		analytics, err := driver.Series(params)
@@ -185,7 +185,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 			Property:  property,
 			TimeRange: timeRange,
 			Unique:    unique,
-			URL:       req.URL.String(),
+			URL:       req.URL,
 		}
 
 		analytics, err := driver.GroupBy(params)
@@ -240,7 +240,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 		params := database.Params{
 			DBName:    dbName,
 			TimeRange: timeRange,
-			URL:       req.URL.String(),
+			URL:       req.URL,
 		}
 
 		analytics, err := driver.Query(params)
