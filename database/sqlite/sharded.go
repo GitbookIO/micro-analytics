@@ -85,6 +85,7 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 			return nil, err
 		}
 
+		return nil, nil
 		cached, inCache := driver.cache.Get(cacheURL)
 		if inCache {
 			var ok bool
@@ -95,7 +96,7 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 			// Else query shard
 			// Construct each shard DBPath
 			shardPath := manager.DBPath{
-				Name:      shard,
+				Name:      shardName,
 				Directory: dbPath.String(),
 			}
 
@@ -184,7 +185,7 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 			// Else query shard
 			// Construct each shard DBPath
 			shardPath := manager.DBPath{
-				Name:      shard,
+				Name:      shardName,
 				Directory: dbPath.String(),
 			}
 
@@ -289,7 +290,7 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 			// Else query shard
 			// Construct each shard DBPath
 			shardPath := manager.DBPath{
-				Name:      shard,
+				Name:      shardName,
 				Directory: dbPath.String(),
 			}
 
