@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/golang-lru"
@@ -398,12 +399,14 @@ func (driver *Sharded) Delete(params database.Params) error {
 // Convert a time to a shard name
 // 2015-12-08T00:00:00.000Z -> 201512
 func timeToShardName(timeValue time.Time) string {
-	layout := "200601"
+	layout := "2006-01"
 	return timeValue.Format(layout)
 }
 
 // Convert a shard name to an int
 func shardNameToInt(shardName string) (int, error) {
+	parts := strings.Split(shardName, "-")
+	shardName = strings.Join(parts, "")
 	shardInt, err := strconv.Atoi(shardName)
 	return shardInt, err
 }
