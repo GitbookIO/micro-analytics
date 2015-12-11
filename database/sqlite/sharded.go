@@ -85,7 +85,6 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 			return nil, err
 		}
 
-		return nil, nil
 		cached, inCache := driver.cache.Get(cacheURL)
 		if inCache {
 			var ok bool
