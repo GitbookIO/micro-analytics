@@ -59,6 +59,63 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 	})
 
 	/////
+	// Push a list of analytics to different DBs
+	/////
+	r.Path("/bulk").
+		Methods("POST").
+		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+
+		// Parse JSON POST data
+		postList := PostAnalytics{}
+		jsonDecoder := json.NewDecoder(req.Body)
+		err := jsonDecoder.Decode(&postList)
+
+		// Invalid JSON
+		if err != nil {
+			renderError(w, &webErrors.InvalidJSON)
+			return
+		}
+
+		for _, postData := range postList.List {
+			// Create Analytic to inject in DB
+			analytic := database.Analytic{
+				Time:          time.Unix(int64(postData.Time), 0),
+				Event:         postData.Event,
+				Path:          postData.Path,
+				Ip:            postData.Ip,
+				Platform:      postData.Platform,
+				RefererDomain: postData.RefererDomain,
+				CountryCode:   postData.CountryCode,
+			}
+
+			// Get countryCode from GeoIp
+			analytic.CountryCode, err = geoip.GeoIpLookup(geolite2, postData.Ip)
+			if err != nil {
+				log.Error("Error [%v] looking for countryCode for IP %s", postData.Ip)
+			}
+
+			// Construct Params object
+			params := database.Params{
+				DBName: postData.Website,
+			}
+
+			err = driver.Insert(params, analytic)
+			if err != nil {
+				if _, ok := err.(*driverErrors.DriverError); ok {
+					renderError(w, &webErrors.InsertFailed)
+					return
+				}
+				renderError(w, err)
+				return
+			}
+
+			log.Info("Successfully inserted analytic: %#v", analytic)
+		}
+
+		render(w, nil, nil)
+	})
+
+	/////
 	// Query a DB over time
 	/////
 	r.Path("/{dbName}/time").
@@ -377,63 +434,6 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 			// Construct Params object
 			params := database.Params{
 				DBName: dbName,
-			}
-
-			err = driver.Insert(params, analytic)
-			if err != nil {
-				if _, ok := err.(*driverErrors.DriverError); ok {
-					renderError(w, &webErrors.InsertFailed)
-					return
-				}
-				renderError(w, err)
-				return
-			}
-
-			log.Info("Successfully inserted analytic: %#v", analytic)
-		}
-
-		render(w, nil, nil)
-	})
-
-	/////
-	// Push a list of analytics to different DBs
-	/////
-	r.Path("/bulk").
-		Methods("POST").
-		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-
-		// Parse JSON POST data
-		postList := PostAnalytics{}
-		jsonDecoder := json.NewDecoder(req.Body)
-		err := jsonDecoder.Decode(&postList)
-
-		// Invalid JSON
-		if err != nil {
-			renderError(w, &webErrors.InvalidJSON)
-			return
-		}
-
-		for _, postData := range postList.List {
-			// Create Analytic to inject in DB
-			analytic := database.Analytic{
-				Time:          time.Unix(int64(postData.Time), 0),
-				Event:         postData.Event,
-				Path:          postData.Path,
-				Ip:            postData.Ip,
-				Platform:      postData.Platform,
-				RefererDomain: postData.RefererDomain,
-				CountryCode:   postData.CountryCode,
-			}
-
-			// Get countryCode from GeoIp
-			analytic.CountryCode, err = geoip.GeoIpLookup(geolite2, postData.Ip)
-			if err != nil {
-				log.Error("Error [%v] looking for countryCode for IP %s", postData.Ip)
-			}
-
-			// Construct Params object
-			params := database.Params{
-				DBName: postData.Website,
 			}
 
 			err = driver.Insert(params, analytic)
