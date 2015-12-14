@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -63,6 +64,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 	r.Path("/{dbName}/time").
 		Methods("GET").
 		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+
 		// Get params from URL
 		vars := mux.Vars(req)
 		dbName := vars["dbName"]
@@ -139,6 +141,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 	r.Path("/{dbName}/{property}").
 		Methods("GET").
 		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+
 		// Map allowed requests w/ columns names in DB schema
 		allowedProperties := map[string]string{
 			"countries": "countryCode",
@@ -298,14 +301,15 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 			analytic.Time, err = time.Parse(time.RFC3339, postData.Time)
 		}
 
-		// Get referer from headers
-		refererHeader := postData.Headers["referer"]
+		// Set analytic referer domain
+		refererHeader := getReferrer(postData.Headers)
 		if referrerURL, err := url.ParseRequestURI(refererHeader); err == nil {
 			analytic.RefererDomain = referrerURL.Host
 		}
 
-		// Get platform from headers
-		analytic.Platform = utils.Platform(postData.Headers["user-agent"])
+		// Extract analytic platform from userAgent
+		userAgent := getUserAgent(postData.Headers)
+		analytic.Platform = utils.Platform(userAgent)
 
 		// Get countryCode from GeoIp
 		analytic.CountryCode, err = geoip.GeoIpLookup(geolite2, postData.Ip)
@@ -336,6 +340,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 	r.Path("/{dbName}/special").
 		Methods("POST").
 		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+
 		// Get dbName from URL
 		vars := mux.Vars(req)
 		dbName := vars["dbName"]
@@ -388,6 +393,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 	r.Path("/{dbName}/bulk").
 		Methods("POST").
 		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+
 		// Get dbName from URL
 		vars := mux.Vars(req)
 		dbName := vars["dbName"]
@@ -526,4 +532,36 @@ func newTimeRange(start string, end string) (*database.TimeRange, error) {
 	}
 
 	return &timeRange, nil
+}
+
+func getReferrer(headers map[string]string) string {
+	// Catch Refer(r)er in lower or camel case
+	refererRegexp := regexp.MustCompile(`(?i)referr?er`)
+
+	// Default value
+	referer := "unknown"
+
+	for header, value := range headers {
+		if refererRegexp.MatchString(header) {
+			referer = value
+		}
+	}
+
+	return referer
+}
+
+func getUserAgent(headers map[string]string) string {
+	// Catch User-Agent lower or camel case
+	userAgentRegexp := regexp.MustCompile(`(?i)user-agent`)
+
+	// Default value
+	userAgent := "unknown"
+
+	for header, value := range headers {
+		if userAgentRegexp.MatchString(header) {
+			userAgent = value
+		}
+	}
+
+	return userAgent
 }
