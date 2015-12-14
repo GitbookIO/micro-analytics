@@ -385,7 +385,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 	/////
 	// Push a list of analytics as-is to a DB
 	/////
-	r.Path("/{dbName}/list").
+	r.Path("/{dbName}/bulk").
 		Methods("POST").
 		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// Get dbName from URL
