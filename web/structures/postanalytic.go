@@ -1,6 +1,7 @@
 package structures
 
 type PostAnalytic struct {
+	Website       string `json:"website"`
 	Time          int    `json:"time"`
 	Event         string `json:"event"`
 	Path          string `json:"path"`
