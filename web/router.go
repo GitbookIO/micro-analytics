@@ -335,60 +335,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 	})
 
 	/////
-	// Push analytics as-is to a DB
-	/////
-	r.Path("/{dbName}/special").
-		Methods("POST").
-		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-
-		// Get dbName from URL
-		vars := mux.Vars(req)
-		dbName := vars["dbName"]
-
-		// Parse JSON POST data
-		postData := PostAnalytic{}
-		jsonDecoder := json.NewDecoder(req.Body)
-		err := jsonDecoder.Decode(&postData)
-
-		// Invalid JSON
-		if err != nil {
-			renderError(w, &webErrors.InvalidJSON)
-			return
-		}
-
-		// Create Analytic to inject in DB
-		analytic := database.Analytic{
-			Time:          time.Unix(int64(postData.Time), 0),
-			Event:         postData.Event,
-			Path:          postData.Path,
-			Ip:            postData.Ip,
-			Platform:      postData.Platform,
-			RefererDomain: postData.RefererDomain,
-			CountryCode:   postData.CountryCode,
-		}
-
-		// Construct Params object
-		params := database.Params{
-			DBName: dbName,
-		}
-
-		err = driver.Insert(params, analytic)
-		if err != nil {
-			if _, ok := err.(*driverErrors.DriverError); ok {
-				renderError(w, &webErrors.InsertFailed)
-				return
-			}
-			renderError(w, err)
-			return
-		}
-
-		log.Info("Successfully inserted analytic: %#v", analytic)
-
-		render(w, nil, nil)
-	})
-
-	/////
-	// Push a list of analytics as-is to a DB
+	// Push a list of analytics in DB format
 	/////
 	r.Path("/{dbName}/bulk").
 		Methods("POST").
