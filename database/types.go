@@ -1,6 +1,7 @@
 package database
 
 import (
+	"net/url"
 	"time"
 )
 
@@ -46,7 +47,7 @@ type Params struct {
 	Property  string
 	TimeRange *TimeRange
 	Unique    bool
-	URL       string
+	URL       *url.URL
 }
 
 type TimeRange struct {

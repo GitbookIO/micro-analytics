@@ -26,7 +26,11 @@ func NewServer(opts ServerOpts) (*http.Server, error) {
 		Geolite2Reader: opts.Geolite2Reader,
 		Version:        opts.Version,
 	}
-	handler := web.NewRouter(routerOpts)
+
+	handler, err := web.NewRouter(routerOpts)
+	if err != nil {
+		return nil, err
+	}
 
 	// Use logging
 	handler = handlers.LoggingHandler(os.Stderr, handler)

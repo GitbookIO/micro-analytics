@@ -2,10 +2,12 @@ package sqlite
 
 import (
 	"io/ioutil"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/azer/logger"
+	"github.com/hashicorp/golang-lru"
 
 	"github.com/GitbookIO/micro-analytics/database"
 	"github.com/GitbookIO/micro-analytics/database/errors"
@@ -17,16 +19,24 @@ import (
 type Sharded struct {
 	DBManager *manager.DBManager
 	directory string
-	logger    *logger.Logger
+	cache     *lru.Cache
 }
 
-func NewShardedDriver(driverOpts database.DriverOpts) *Sharded {
+func NewShardedDriver(driverOpts database.DriverOpts) (*Sharded, error) {
 	manager := manager.New(manager.Opts{driverOpts})
-	return &Sharded{
+
+	cache, err := lru.New(driverOpts.CacheSize)
+	if err != nil {
+		return nil, err
+	}
+
+	driver := &Sharded{
 		DBManager: manager,
 		directory: driverOpts.Directory,
-		logger:    logger.New("[Sharded]"),
+		cache:     cache,
 	}
+
+	return driver, nil
 }
 
 func (driver *Sharded) Query(params database.Params) (*database.Analytics, error) {
@@ -51,36 +61,62 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 	// Get list of shards by reading directory
 	shards := listShards(dbPath)
 	analytics := database.Analytics{}
+	cachedRequest := cachedRequest(params.URL)
 
 	// Read from each shard
-	for _, shard := range shards {
+	for _, shardName := range shards {
+
 		// Don't include shard if not in timerange
-		shardInt, err := strconv.Atoi(shard)
+		shardInt, err := shardNameToInt(shardName)
 		if err != nil {
-			driver.logger.Error("Error [%v] converting shard %s name to an integer", err, shard)
+			return nil, err
 		}
 
-		startInt, endInt := convertToInt(params.TimeRange)
+		startInt, endInt := timeRangeToInt(params.TimeRange)
 		if shardInt < startInt || shardInt > endInt {
 			continue
 		}
 
-		// Construct each shard DBPath
-		shardPath := manager.DBPath{
-			Name:      shard,
-			Directory: dbPath.String(),
+		// Get result if is cached
+		var shardAnalytics *database.Analytics
+
+		cacheURL, err := formatURLForCache(params.URL, shardInt, startInt, endInt)
+		if err != nil {
+			return nil, err
 		}
 
-		// Get DB shard from manager
-		db, err := driver.DBManager.GetDB(shardPath)
-		if err != nil {
-			return nil, &errors.InternalError
-		}
+		cached, inCache := driver.cache.Get(cacheURL)
+		if inCache {
+			var ok bool
+			if shardAnalytics, ok = cached.(*database.Analytics); !ok {
+				return nil, &errors.InternalError
+			}
+		} else {
+			// Else query shard
+			// Construct each shard DBPath
+			shardPath := manager.DBPath{
+				Name:      shardName,
+				Directory: dbPath.String(),
+			}
 
-		// Return query result
-		shardAnalytics, err := query.Query(db.Conn, params.TimeRange)
-		if err != nil {
-			return nil, &errors.InternalError
+			// Get DB shard from manager
+			db, err := driver.DBManager.GetDB(shardPath)
+			if err != nil {
+				return nil, &errors.InternalError
+			}
+
+			// Return query result
+			db.Lock()
+			shardAnalytics, err = query.Query(db.Conn, params.TimeRange)
+			db.Unlock()
+			if err != nil {
+				return nil, &errors.InternalError
+			}
+
+			// Set shard result in cache if asked
+			if cachedRequest {
+				driver.cache.Add(cacheURL, shardAnalytics)
+			}
 		}
 
 		// Add shard result to analytics
@@ -88,18 +124,6 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 			analytics.List = append(analytics.List, analytic)
 		}
 	}
-
-	// // If value is in Cache, return directly
-	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
-	// if inCache {
-	// 	if response, ok := cached.(*database.Analytics); ok {
-	// 		driver.DBManager.UnlockDB <- dbPath
-	// 		return response, nil
-	// 	}
-	// }
-
-	// // Store response in Cache before sending
-	// driver.DBManager.Cache.Add(params.URL, analytics)
 
 	return &analytics, nil
 }
@@ -131,43 +155,69 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 	// Helper map to aggregate
 	analyticsMap := map[string]database.Aggregate{}
 
+	cachedRequest := cachedRequest(params.URL)
+
 	// Read from each shard
-	for _, shard := range shards {
+	for _, shardName := range shards {
 		// Don't include shard if not in timerange
-		shardInt, err := strconv.Atoi(shard)
+		shardInt, err := shardNameToInt(shardName)
 		if err != nil {
-			driver.logger.Error("Error [%v] converting shard %s name to an integer", err, shard)
+			return nil, err
 		}
 
-		startInt, endInt := convertToInt(params.TimeRange)
+		startInt, endInt := timeRangeToInt(params.TimeRange)
 		if shardInt < startInt || shardInt > endInt {
 			continue
 		}
 
-		// Construct each shard DBPath
-		shardPath := manager.DBPath{
-			Name:      shard,
-			Directory: dbPath.String(),
-		}
-
-		// Get DB shard from manager
-		db, err := driver.DBManager.GetDB(shardPath)
-		if err != nil {
-			return nil, &errors.InternalError
-		}
-
+		// Get result if is cached
 		var shardAnalytics *database.Aggregates
 
-		// Check for unique query parameter to call function accordingly
-		if params.Unique {
-			shardAnalytics, err = query.GroupByUniq(db.Conn, params.Property, params.TimeRange)
-			if err != nil {
+		cacheURL, err := formatURLForCache(params.URL, shardInt, startInt, endInt)
+		if err != nil {
+			return nil, err
+		}
+
+		cached, inCache := driver.cache.Get(cacheURL)
+		if inCache {
+			var ok bool
+			if shardAnalytics, ok = cached.(*database.Aggregates); !ok {
 				return nil, &errors.InternalError
 			}
 		} else {
-			shardAnalytics, err = query.GroupBy(db.Conn, params.Property, params.TimeRange)
+			// Else query shard
+			// Construct each shard DBPath
+			shardPath := manager.DBPath{
+				Name:      shardName,
+				Directory: dbPath.String(),
+			}
+
+			// Get DB shard from manager
+			db, err := driver.DBManager.GetDB(shardPath)
 			if err != nil {
 				return nil, &errors.InternalError
+			}
+
+			// Check for unique query parameter to call function accordingly
+			if params.Unique {
+				db.Lock()
+				shardAnalytics, err = query.GroupByUniq(db.Conn, params.Property, params.TimeRange)
+				db.Unlock()
+				if err != nil {
+					return nil, &errors.InternalError
+				}
+			} else {
+				db.Lock()
+				shardAnalytics, err = query.GroupBy(db.Conn, params.Property, params.TimeRange)
+				db.Unlock()
+				if err != nil {
+					return nil, &errors.InternalError
+				}
+			}
+
+			// Set shard result in cache if asked
+			if cachedRequest {
+				driver.cache.Add(cacheURL, shardAnalytics)
 			}
 		}
 
@@ -187,18 +237,6 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 	for _, analytic := range analyticsMap {
 		analytics.List = append(analytics.List, analytic)
 	}
-
-	// // If value is in Cache, return directly
-	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
-	// if inCache {
-	// 	if response, ok := cached.(*database.Aggregates); ok {
-	// 		driver.DBManager.UnlockDB <- dbPath
-	// 		return response, nil
-	// 	}
-	// }
-
-	// // Store response in Cache before sending
-	// driver.DBManager.Cache.Add(params.URL, analytics)
 
 	return &analytics, nil
 }
@@ -228,43 +266,67 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 	// Aggregated query result
 	analytics := database.Intervals{}
 
+	cachedRequest := cachedRequest(params.URL)
+
 	// Read from each shard
-	for _, shard := range shards {
+	for _, shardName := range shards {
 		// Don't include shard if not in timerange
-		shardInt, err := strconv.Atoi(shard)
+		shardInt, err := shardNameToInt(shardName)
 		if err != nil {
-			driver.logger.Error("Error [%v] converting shard %s name to an integer", err, shard)
+			return nil, err
 		}
 
-		startInt, endInt := convertToInt(params.TimeRange)
+		startInt, endInt := timeRangeToInt(params.TimeRange)
 		if shardInt < startInt || shardInt > endInt {
 			continue
 		}
 
-		// Construct each shard DBPath
-		shardPath := manager.DBPath{
-			Name:      shard,
-			Directory: dbPath.String(),
-		}
-
-		// Get DB shard from manager
-		db, err := driver.DBManager.GetDB(shardPath)
-		if err != nil {
-			return nil, &errors.InternalError
-		}
-
+		// Get result if is cached
 		var shardAnalytics *database.Intervals
 
-		// Check for unique query parameter to call function accordingly
-		if params.Unique {
-			shardAnalytics, err = query.SeriesUniq(db.Conn, params.Interval, params.TimeRange)
-			if err != nil {
+		cacheURL, err := formatURLForCache(params.URL, shardInt, startInt, endInt)
+		if err != nil {
+			return nil, err
+		}
+
+		cached, inCache := driver.cache.Get(cacheURL)
+		if inCache {
+			var ok bool
+			if shardAnalytics, ok = cached.(*database.Intervals); !ok {
 				return nil, &errors.InternalError
 			}
 		} else {
-			shardAnalytics, err = query.Series(db.Conn, params.Interval, params.TimeRange)
+			// Else query shard
+			// Construct each shard DBPath
+			shardPath := manager.DBPath{
+				Name:      shardName,
+				Directory: dbPath.String(),
+			}
+
+			// Get DB shard from manager
+			db, err := driver.DBManager.GetDB(shardPath)
 			if err != nil {
 				return nil, &errors.InternalError
+			}
+
+			// Check for unique query parameter to call function accordingly
+			if params.Unique {
+				db.Lock()
+				shardAnalytics, err = query.SeriesUniq(db.Conn, params.Interval, params.TimeRange)
+				db.Unlock()
+				if err != nil {
+					return nil, &errors.InternalError
+				}
+			} else {
+				shardAnalytics, err = query.Series(db.Conn, params.Interval, params.TimeRange)
+				if err != nil {
+					return nil, &errors.InternalError
+				}
+			}
+
+			// Set shard result in cache if asked
+			if cachedRequest {
+				driver.cache.Add(cacheURL, shardAnalytics)
 			}
 		}
 
@@ -273,18 +335,6 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 			analytics.List = append(analytics.List, analytic)
 		}
 	}
-
-	// // If value is in Cache, return directly
-	// cached, inCache := driver.DBManager.Cache.Get(params.URL)
-	// if inCache {
-	// 	if response, ok := cached.(*database.Intervals); ok {
-	// 		driver.DBManager.UnlockDB <- dbPath
-	// 		return response, nil
-	// 	}
-	// }
-
-	// // Store response in Cache before sending
-	// driver.DBManager.Cache.Add(params.URL, analytics)
 
 	return &analytics, nil
 }
@@ -297,7 +347,7 @@ func (driver *Sharded) Insert(params database.Params, analytic database.Analytic
 	}
 
 	// Push to right shard based on analytic time
-	shardName := timeToShard(analytic.Time)
+	shardName := timeToShardName(analytic.Time)
 
 	// Construct shard DBPath
 	shardPath := manager.DBPath{
@@ -306,15 +356,15 @@ func (driver *Sharded) Insert(params database.Params, analytic database.Analytic
 	}
 
 	// Get DB from manager
-	driver.logger.Info("Request for DB %s", shardPath)
 	db, err := driver.DBManager.GetDB(shardPath)
 	if err != nil {
 		return &errors.InternalError
 	}
 
-	driver.logger.Info("Inserting in DB %s", shardPath)
 	// Insert data if everything's OK
+	db.Lock()
 	err = query.Insert(db.Conn, analytic)
+	db.Unlock()
 
 	if err != nil {
 		return &errors.InsertFailed
@@ -348,11 +398,20 @@ func (driver *Sharded) Delete(params database.Params) error {
 
 // Convert a time to a shard name
 // 2015-12-08T00:00:00.000Z -> 201512
-func timeToShard(timeValue time.Time) string {
-	layout := "200601"
+func timeToShardName(timeValue time.Time) string {
+	layout := "2006-01"
 	return timeValue.Format(layout)
 }
 
+// Convert a shard name to an int
+func shardNameToInt(shardName string) (int, error) {
+	parts := strings.Split(shardName, "-")
+	shardName = strings.Join(parts, "")
+	shardInt, err := strconv.Atoi(shardName)
+	return shardInt, err
+}
+
+// Return the list of all shards in a DBPath
 func listShards(dbPath manager.DBPath) []string {
 	folders, err := ioutil.ReadDir(dbPath.String())
 	if err != nil {
@@ -369,7 +428,7 @@ func listShards(dbPath manager.DBPath) []string {
 
 // Helper function to return start and end time as an int in YYYYMM format
 // Defaults to 0 for Start and 999999 for End
-func convertToInt(timeRange *database.TimeRange) (int, int) {
+func timeRangeToInt(timeRange *database.TimeRange) (int, int) {
 	var err error
 	layout := "200601"
 
@@ -394,6 +453,49 @@ func convertToInt(timeRange *database.TimeRange) (int, int) {
 	}
 
 	return startInt, endInt
+}
+
+// Format URL for a specific shard
+// Basically, remove start/end if is is before/after shard time
+func formatURLForCache(uRL *url.URL, shardName int, startMonth int, endMonth int) (string, error) {
+	// Extract URL query parameters
+	queryParams := uRL.Query()
+
+	// Remove start
+	if startMonth < shardName {
+		queryParams.Del("start")
+	}
+
+	// Remove end
+	if endMonth > shardName {
+		queryParams.Del("end")
+	}
+
+	// Remove cache for months before current month
+	currentMonth, err := shardNameToInt(timeToShardName(time.Now()))
+	if err != nil {
+		return "", err
+	}
+
+	if shardName < currentMonth {
+		queryParams.Del("cache")
+	}
+
+	// Add shard=shardName query parameter
+	queryParams.Add("shard", strconv.Itoa(shardName))
+
+	// Create new modified URL
+	cacheURL := *uRL
+	cacheURL.RawQuery = queryParams.Encode()
+
+	return cacheURL.String(), nil
+}
+
+// Return true if cache query parameter passed
+func cachedRequest(uRL *url.URL) bool {
+	// Extract query parameters
+	queryParams := uRL.Query()
+	return len(queryParams.Get("cache")) > 0
 }
 
 var _ database.Driver = &Sharded{}

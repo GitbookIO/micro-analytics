@@ -30,7 +30,7 @@ type RouterOpts struct {
 	Version        string
 }
 
-func NewRouter(opts RouterOpts) http.Handler {
+func NewRouter(opts RouterOpts) (http.Handler, error) {
 	// Create the app router
 	r := mux.NewRouter()
 	var log = logger.New("[Router]")
@@ -38,7 +38,10 @@ func NewRouter(opts RouterOpts) http.Handler {
 	geolite2 := opts.Geolite2Reader
 
 	// Initiate DB driver
-	driver := sqlite.NewShardedDriver(opts.DriverOpts)
+	driver, err := sqlite.NewShardedDriver(opts.DriverOpts)
+	if err != nil {
+		return nil, err
+	}
 
 	/////
 	// Welcome
@@ -104,7 +107,7 @@ func NewRouter(opts RouterOpts) http.Handler {
 			Interval:  interval,
 			TimeRange: timeRange,
 			Unique:    unique,
-			URL:       req.URL.String(),
+			URL:       req.URL,
 		}
 
 		analytics, err := driver.Series(params)
@@ -182,7 +185,7 @@ func NewRouter(opts RouterOpts) http.Handler {
 			Property:  property,
 			TimeRange: timeRange,
 			Unique:    unique,
-			URL:       req.URL.String(),
+			URL:       req.URL,
 		}
 
 		analytics, err := driver.GroupBy(params)
@@ -237,7 +240,7 @@ func NewRouter(opts RouterOpts) http.Handler {
 		params := database.Params{
 			DBName:    dbName,
 			TimeRange: timeRange,
-			URL:       req.URL.String(),
+			URL:       req.URL,
 		}
 
 		analytics, err := driver.Query(params)
@@ -475,7 +478,7 @@ func NewRouter(opts RouterOpts) http.Handler {
 		render(w, nil, nil)
 	})
 
-	return r
+	return r, nil
 }
 
 // Initialize and validate a TimeRange struct with parameters
