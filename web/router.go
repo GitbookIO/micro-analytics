@@ -496,37 +496,26 @@ func newTimeRange(start string, end string) (*database.TimeRange, error) {
 
 	timeRange := database.TimeRange{}
 
-	var startTime time.Time
-	var endTime time.Time
-
+	// Parse start value
 	if len(start) > 0 {
-		// Try to parse as RFC3339
-		startTime, err := time.Parse(time.RFC3339, start)
+		startTime, err := parseTime(start)
 		if err != nil {
-			// Try to parse as RFC1123
-			startTime, err = time.Parse(time.RFC1123, start)
-			if err != nil {
-				return nil, err
-			}
+			return nil, err
 		}
 		timeRange.Start = startTime
 	}
 
+	// Parse end value
 	if len(end) > 0 {
-		// Try to parse as RFC3339
-		endTime, err := time.Parse(time.RFC3339, end)
+		endTime, err := parseTime(end)
 		if err != nil {
-			// Try to parse as RFC1123
-			endTime, err = time.Parse(time.RFC1123, end)
-			if err != nil {
-				return nil, err
-			}
+			return nil, err
 		}
 		timeRange.End = endTime
 	}
 
-	// Ensure endTime < startTime
-	if len(start) > 0 && len(end) > 0 && endTime.Before(startTime) {
+	// Ensure timeRange.End > timeRange.Start
+	if len(start) > 0 && len(end) > 0 && timeRange.End.Before(timeRange.Start) {
 		err := errors.New("start must be before end in a TimeRange")
 		return nil, err
 	}
@@ -534,6 +523,18 @@ func newTimeRange(start string, end string) (*database.TimeRange, error) {
 	return &timeRange, nil
 }
 
+// Try to parse a time string as RFC3339 or RFC1123
+func parseTime(timeStr string) (time.Time, error) {
+	// Try to parse as RFC3339
+	timeValue, err := time.Parse(time.RFC3339, timeStr)
+	if err != nil {
+		// Try to parse as RFC1123
+		timeValue, err = time.Parse(time.RFC1123, timeStr)
+	}
+	return timeValue, err
+}
+
+// Extract Referer from passed headers
 func getReferrer(headers map[string]string) string {
 	// Catch Refer(r)er in lower or camel case
 	refererRegexp := regexp.MustCompile(`(?i)referr?er`)
@@ -550,6 +551,7 @@ func getReferrer(headers map[string]string) string {
 	return referer
 }
 
+// Extract User-Agent from passed headers
 func getUserAgent(headers map[string]string) string {
 	// Catch User-Agent lower or camel case
 	userAgentRegexp := regexp.MustCompile(`(?i)user-agent`)
