@@ -32,19 +32,22 @@ func main() {
 			EnvVar: "PORT",
 		},
 		cli.StringFlag{
-			Name:  "directory, d",
-			Value: "./dbs/",
-			Usage: "Database directory",
+			Name:   "directory, d",
+			Value:  "./dbs/",
+			Usage:  "Database directory",
+			EnvVar: "ROOT",
 		},
 		cli.IntFlag{
-			Name:  "connections, c",
-			Value: 10,
-			Usage: "Max number of alive DB connections",
+			Name:   "connections, c",
+			Value:  10,
+			Usage:  "Max number of alive DB connections",
+			EnvVar: "POOL_SIZE",
 		},
 		cli.IntFlag{
-			Name:  "cache-size, s",
-			Value: 100000,
-			Usage: "Max number of cached requests",
+			Name:   "cache-size, s",
+			Value:  100000,
+			Usage:  "Max number of cached requests",
+			EnvVar: "CACHE_SIZE",
 		},
 	}
 
