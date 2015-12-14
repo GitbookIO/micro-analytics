@@ -1,2 +1,3 @@
-
-data/geolite2db.go
+/utils/geoip/data/geolite2db.go
+/analytics
+/micro-analytics
