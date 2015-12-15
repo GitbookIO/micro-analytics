@@ -113,7 +113,7 @@ Returns the full analytics for a website.
 }
 ```
 
-#### GET `/:count`
+#### GET `/:website/count`
 
 Returns the count of analytics for a website. The `unique` query string parameter is not necessary for this request.
 
