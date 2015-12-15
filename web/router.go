@@ -193,6 +193,70 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 	})
 
 	/////
+	// Count for a DB
+	/////
+	r.Path("/{dbName}/count").
+		Methods("GET").
+		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+
+		// Get params from URL
+		vars := mux.Vars(req)
+		dbName := vars["dbName"]
+
+		// Parse request query
+		if err := req.ParseForm(); err != nil {
+			renderError(w, err)
+			return
+		}
+
+		// Get timeRange if provided
+		startTime := req.Form.Get("start")
+		endTime := req.Form.Get("end")
+
+		// Convert startTime and endTime to a TimeRange
+		timeRange, err := newTimeRange(startTime, endTime)
+		if err != nil {
+			renderError(w, &webErrors.InvalidTimeFormat)
+			return
+		}
+
+		unique := false
+		if strings.Compare(req.Form.Get("unique"), "true") == 0 {
+			unique = true
+		}
+
+		// Construct Params object
+		params := database.Params{
+			DBName:    dbName,
+			TimeRange: timeRange,
+			Unique:    unique,
+			URL:       req.URL,
+		}
+
+		analytics, err := driver.Count(params)
+		if err != nil {
+			if driverErr, ok := err.(*driverErrors.DriverError); ok {
+				switch driverErr.Code {
+				case 1:
+					renderError(w, &webErrors.InternalError)
+				case 2:
+					renderError(w, &webErrors.InvalidDatabaseName)
+				case 3:
+					renderError(w, &webErrors.InvalidTimeFormat)
+				default:
+					renderError(w, err)
+				}
+				return
+			}
+			renderError(w, err)
+			return
+		}
+
+		// Return query result
+		render(w, analytics, nil)
+	})
+
+	/////
 	// Query a DB by property
 	/////
 	r.Path("/{dbName}/{property}").

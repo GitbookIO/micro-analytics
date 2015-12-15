@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+type Count struct {
+	Total  int `json:"total"`
+	Unique int `json:"unique"`
+}
+
 type Analytic struct {
 	Time          time.Time `json:"time"`
 	Event         string    `json:"event"`

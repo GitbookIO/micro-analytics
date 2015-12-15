@@ -1,6 +1,8 @@
 package database
 
 type Driver interface {
+	// Count number of stats
+	Count(params Params) (*Count, error)
 	// Return aggregated stats by property
 	GroupBy(params Params) (*Aggregates, error)
 	// Return time serie sliced by a specific interval

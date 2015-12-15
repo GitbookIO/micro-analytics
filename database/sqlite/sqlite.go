@@ -54,6 +54,39 @@ func (driver *SQLite) Query(params database.Params) (*database.Analytics, error)
 	return analytics, nil
 }
 
+func (driver *SQLite) Count(params database.Params) (*database.Count, error) {
+	// Construct DBPath
+	dbPath := manager.DBPath{
+		Name:      params.DBName,
+		Directory: driver.directory,
+	}
+
+	// Check if DB file exists
+	dbExists, err := driver.DBManager.DBExists(dbPath)
+	if err != nil {
+		return nil, &errors.InternalError
+	}
+
+	// DB doesn't exist
+	if !dbExists {
+		return nil, &errors.InvalidDatabaseName
+	}
+
+	// Get DB from manager
+	db, err := driver.DBManager.GetDB(dbPath)
+	if err != nil {
+		return nil, &errors.InternalError
+	}
+
+	// Return query result
+	analytics, err := query.Count(db.Conn, params.TimeRange)
+	if err != nil {
+		return nil, &errors.InternalError
+	}
+
+	return analytics, nil
+}
+
 func (driver *SQLite) GroupBy(params database.Params) (*database.Aggregates, error) {
 	// Construct DBPath
 	dbPath := manager.DBPath{
