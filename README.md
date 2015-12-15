@@ -35,11 +35,12 @@ $ ./micro-analytics
 
 The command takes the following optional parameters:
 
-Parameter | Usage | Type | Default Value
----- | ---- | ---- | ----
-`-port, --p` | Port to listen on | String | `"7070"`
-`-directory, -d` | Database directory | String | `"./dbs"`
-`-connections, -c` | Max number of alive shards connections | Number | `10`
+Parameter | Environment Variable | Usage | Type | Default Value
+---- | ---- | ---- | ---- | ----
+`-port, --p` | `MA_PORT` | Port to listen on | String | `"7070"`
+`-directory, --d` | `MA_ROOT` | Database directory | String | `"./dbs"`
+`-connections, --c` | `MA_POOL_SIZE` | Max number of alive shards connections | Number | `10`
+`-cache-size, --s` | `MA_CACHE_SIZE` | Max number of cached requests | Number | `100000`
 
 
 ## Analytics schema
