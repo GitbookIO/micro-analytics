@@ -128,6 +128,96 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 	return &analytics, nil
 }
 
+func (driver *Sharded) Count(params database.Params) (*database.Count, error) {
+	// Construct DBPath
+	dbPath := manager.DBPath{
+		Name:      params.DBName,
+		Directory: driver.directory,
+	}
+
+	// Check if DB file exists
+	dbExists, err := driver.DBManager.DBExists(dbPath)
+	if err != nil {
+		return nil, &errors.InternalError
+	}
+
+	// DB doesn't exist
+	if !dbExists {
+		return nil, &errors.InvalidDatabaseName
+	}
+
+	// At this point, there should be shards to query
+	// Get list of shards by reading directory
+	shards := listShards(dbPath)
+
+	// Aggregated query result
+	analytics := database.Count{}
+
+	cachedRequest := cachedRequest(params.URL)
+
+	// Read from each shard
+	for _, shardName := range shards {
+		// Don't include shard if not in timerange
+		shardInt, err := shardNameToInt(shardName)
+		if err != nil {
+			return nil, err
+		}
+
+		startInt, endInt := timeRangeToInt(params.TimeRange)
+		if shardInt < startInt || shardInt > endInt {
+			continue
+		}
+
+		// Get result if is cached
+		var shardAnalytics *database.Count
+
+		cacheURL, err := formatURLForCache(params.URL, shardInt, startInt, endInt)
+		if err != nil {
+			return nil, err
+		}
+
+		cached, inCache := driver.cache.Get(cacheURL)
+		if inCache {
+			var ok bool
+			if shardAnalytics, ok = cached.(*database.Count); !ok {
+				return nil, &errors.InternalError
+			}
+		} else {
+			// Else query shard
+			// Construct each shard DBPath
+			shardPath := manager.DBPath{
+				Name:      shardName,
+				Directory: dbPath.String(),
+			}
+
+			// Get DB shard from manager
+			db, err := driver.DBManager.GetDB(shardPath)
+			if err != nil {
+				return nil, &errors.InternalError
+			}
+
+			// Launch query
+			db.Lock()
+			shardAnalytics, err = query.Count(db.Conn, params.TimeRange)
+			db.Unlock()
+			if err != nil {
+				return nil, &errors.InternalError
+			}
+
+			// Set shard result in cache if asked
+			if cachedRequest {
+				driver.cache.Add(cacheURL, shardAnalytics)
+			}
+		}
+
+		// Add shard result to main result
+		analytics.Total += shardAnalytics.Total
+		analytics.Unique += shardAnalytics.Unique
+	}
+
+	return &analytics, nil
+}
+
 func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, error) {
 	// Construct DBPath
 	dbPath := manager.DBPath{
