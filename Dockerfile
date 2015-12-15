@@ -9,8 +9,8 @@ RUN cd $GOPATH/src/github.com/GitbookIO/micro-analytics && go get && go build --
 ##
 # Env
 ##
-ENV PORT 7070
-ENV ROOT /opt/data/
+ENV MA_PORT 7070
+ENV MA_ROOT /opt/data/
 
 # Set default command
 CMD /go/bin/micro-analytics
