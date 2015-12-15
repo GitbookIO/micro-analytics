@@ -101,11 +101,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 
 			err = driver.Insert(params, analytic)
 			if err != nil {
-				if _, ok := err.(*driverErrors.DriverError); ok {
-					renderError(w, &webErrors.InsertFailed)
-					return
-				}
-				renderError(w, err)
+				renderError(w, normalizeDriverError(err))
 				return
 			}
 
@@ -171,20 +167,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 
 		analytics, err := driver.Series(params)
 		if err != nil {
-			if driverErr, ok := err.(*driverErrors.DriverError); ok {
-				switch driverErr.Code {
-				case 1:
-					renderError(w, &webErrors.InternalError)
-				case 2:
-					renderError(w, &webErrors.InvalidDatabaseName)
-				case 3:
-					renderError(w, &webErrors.InvalidTimeFormat)
-				default:
-					renderError(w, err)
-				}
-				return
-			}
-			renderError(w, err)
+			renderError(w, normalizeDriverError(err))
 			return
 		}
 
@@ -235,20 +218,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 
 		analytics, err := driver.Count(params)
 		if err != nil {
-			if driverErr, ok := err.(*driverErrors.DriverError); ok {
-				switch driverErr.Code {
-				case 1:
-					renderError(w, &webErrors.InternalError)
-				case 2:
-					renderError(w, &webErrors.InvalidDatabaseName)
-				case 3:
-					renderError(w, &webErrors.InvalidTimeFormat)
-				default:
-					renderError(w, err)
-				}
-				return
-			}
-			renderError(w, err)
+			renderError(w, normalizeDriverError(err))
 			return
 		}
 
@@ -314,18 +284,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 
 		analytics, err := driver.GroupBy(params)
 		if err != nil {
-			if driverErr, ok := err.(*driverErrors.DriverError); ok {
-				switch driverErr.Code {
-				case 1:
-					renderError(w, &webErrors.InternalError)
-				case 2:
-					renderError(w, &webErrors.InvalidDatabaseName)
-				default:
-					renderError(w, err)
-				}
-				return
-			}
-			renderError(w, err)
+			renderError(w, normalizeDriverError(err))
 			return
 		}
 
@@ -369,18 +328,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 
 		analytics, err := driver.Query(params)
 		if err != nil {
-			if driverErr, ok := err.(*driverErrors.DriverError); ok {
-				switch driverErr.Code {
-				case 1:
-					renderError(w, &webErrors.InternalError)
-				case 2:
-					renderError(w, &webErrors.InvalidDatabaseName)
-				default:
-					renderError(w, err)
-				}
-				return
-			}
-			renderError(w, err)
+			renderError(w, normalizeDriverError(err))
 			return
 		}
 
@@ -442,11 +390,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 
 		err = driver.Insert(params, analytic)
 		if err != nil {
-			if _, ok := err.(*driverErrors.DriverError); ok {
-				renderError(w, &webErrors.InsertFailed)
-				return
-			}
-			renderError(w, err)
+			renderError(w, normalizeDriverError(err))
 			return
 		}
 
@@ -502,11 +446,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 
 			err = driver.Insert(params, analytic)
 			if err != nil {
-				if _, ok := err.(*driverErrors.DriverError); ok {
-					renderError(w, &webErrors.InsertFailed)
-					return
-				}
-				renderError(w, err)
+				renderError(w, normalizeDriverError(err))
 				return
 			}
 
@@ -534,18 +474,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 
 		err := driver.Delete(params)
 		if err != nil {
-			if driverErr, ok := err.(*driverErrors.DriverError); ok {
-				switch driverErr.Code {
-				case 1:
-					renderError(w, &webErrors.InternalError)
-				case 2:
-					renderError(w, &webErrors.InvalidDatabaseName)
-				default:
-					renderError(w, err)
-				}
-				return
-			}
-			renderError(w, err)
+			renderError(w, normalizeDriverError(err))
 			return
 		}
 
@@ -634,4 +563,21 @@ func getUserAgent(headers map[string]string) string {
 	}
 
 	return userAgent
+}
+
+func normalizeDriverError(err error) error {
+	if driverErr, ok := err.(*driverErrors.DriverError); ok {
+		switch driverErr.Code {
+		case 1:
+			return &webErrors.InternalError
+		case 2:
+			return &webErrors.InvalidDatabaseName
+		case 3:
+			return &webErrors.InsertFailed
+		default:
+			return &webErrors.InternalError
+		}
+	} else {
+		return err
+	}
 }
