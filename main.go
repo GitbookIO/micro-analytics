@@ -29,25 +29,25 @@ func main() {
 			Name:   "port, p",
 			Value:  "7070",
 			Usage:  "Port to listen on",
-			EnvVar: "PORT",
+			EnvVar: "MA_PORT",
 		},
 		cli.StringFlag{
 			Name:   "directory, d",
 			Value:  "./dbs/",
 			Usage:  "Database directory",
-			EnvVar: "ROOT",
+			EnvVar: "MA_ROOT",
 		},
 		cli.IntFlag{
 			Name:   "connections, c",
 			Value:  10,
 			Usage:  "Max number of alive DB connections",
-			EnvVar: "POOL_SIZE",
+			EnvVar: "MA_POOL_SIZE",
 		},
 		cli.IntFlag{
 			Name:   "cache-size, s",
 			Value:  100000,
 			Usage:  "Max number of cached requests",
-			EnvVar: "CACHE_SIZE",
+			EnvVar: "MA_CACHE_SIZE",
 		},
 	}
 
