@@ -14,6 +14,7 @@ import (
 	"github.com/GitbookIO/micro-analytics/database"
 	"github.com/GitbookIO/micro-analytics/utils"
 	"github.com/GitbookIO/micro-analytics/utils/geoip"
+	"github.com/GitbookIO/micro-analytics/web"
 )
 
 func main() {
@@ -25,6 +26,18 @@ func main() {
 	app.Email = "johan.preynat@gmail.com"
 	app.Usage = "Fast sharded analytics database"
 	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:   "user, u",
+			Value:  "",
+			Usage:  "Username",
+			EnvVar: "MA_USER",
+		},
+		cli.StringFlag{
+			Name:   "password, w",
+			Value:  "",
+			Usage:  "Password",
+			EnvVar: "MA_PASSWORD",
+		},
 		cli.StringFlag{
 			Name:   "port, p",
 			Value:  "7070",
@@ -101,12 +114,19 @@ func main() {
 			os.Exit(1)
 		}()
 
+		// Authentication
+		auth := &web.BasicAuth{
+			Name: ctx.String("user"),
+			Pass: ctx.String("password"),
+		}
+
 		// Setup server
 		opts := ServerOpts{
 			Port:           normalizePort(ctx.String("port")),
 			Version:        app.Version,
 			DriverOpts:     driverOpts,
 			Geolite2Reader: geolite2,
+			Auth:           auth,
 		}
 
 		log.Info("Launching server with: %#v", opts)

@@ -16,6 +16,7 @@ type ServerOpts struct {
 	Version        string
 	DriverOpts     database.DriverOpts
 	Geolite2Reader *maxminddb.Reader
+	Auth           *web.BasicAuth
 }
 
 // Build a http.Server based on the options
@@ -34,6 +35,11 @@ func NewServer(opts ServerOpts) (*http.Server, error) {
 
 	// Use logging
 	handler = handlers.LoggingHandler(os.Stderr, handler)
+
+	// Use authentication if username provided
+	if len(opts.Auth.Name) > 0 {
+		handler = web.BasicAuthMiddleware(opts.Auth, handler)
+	}
 
 	return &http.Server{
 		Addr:    opts.Port,
