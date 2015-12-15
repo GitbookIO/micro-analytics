@@ -2,6 +2,7 @@
 
 A micro multi-website analytics database service designed to be fast and robust, built with Go and SQLite.
 
+![Schema](./schema.png)
 
 ## Principle
 
