@@ -75,6 +75,11 @@ The dates can be passed either as:
  - ISO (RFC3339) `"2015-11-20T12:00:00.000Z"`
  - UTC (RFC1123) `"Fri, 20 Nov 2015 12:00:00 GMT"`
 
+##### Common Aggregation Parameters
+
+Name | Type | Description | Default | Example
+---- | ---- | ---- | ---- | ----
+`unique` | Boolean | Include the total number of unique visitors in response | none | `true`
 
 ##### Common Aggregation Response Values
 
@@ -83,7 +88,7 @@ Except for `GET /:website`, every response to a GET request will contain the two
 Name | Type | Description
 ---- | ---- | ----
 `total` | Integer | Total number of visits
-`unique` | Integer | Total number of unique visitors based on `ip`
+`unique` | Integer | Total number of unique visitors based on `ip`, set to `0` unless `unique=true` is passed as a query string parameter
 
 #### GET `/:website`
 
@@ -105,6 +110,19 @@ Returns the full analytics for a website.
         },
     ...
     ]
+}
+```
+
+#### GET `/:count`
+
+Returns the count of analytics for a website. The `unique` query string parameter is not necessary for this request.
+
+##### Response
+
+```JavaScript
+{
+    "total": 1000,
+    "unique": 900
 }
 ```
 
@@ -249,6 +267,74 @@ The `time` parameter is optional and is set to the date of your POST request by 
 
 Passing the HTTP headers in the POST body allows the service to extract the `refererDomain` and `platform` values.
 The `countryCode` will be deduced from the passed `ip` parameter using [Maxmind's GeoLite2 database](http://dev.maxmind.com/geoip/geoip2/geolite2/).
+
+#### POST `/:website/bulk`
+
+Insert a list of analytics for a specific website. The analytics must be in DB format.
+
+##### POST Body
+
+```JavaScript
+{
+    "list": [
+        {
+            "time": 1450098642,
+            "ip": "127.0.0.1",
+            "event": "download",
+            "path": "/somewhere",
+            "platform": "Apple Mac",
+            "refererDomain": "www.gitbook.com",
+            "countryCode": "fr"
+        },
+        {
+            "time": 0,
+            "ip": "127.0.0.1",
+            "event": "login",
+            "path": "/someplace",
+            "platform": "Linux",
+            "refererDomain": "www.gitbook.com",
+            "countryCode": "us"
+        }
+    ]
+}
+```
+
+The passed `time` value must be a Unix timestamp in seconds. The `countryCode` will be reprocessed by the service using GeoLite2 based on the `ip`.
+
+#### POST `/bulk`
+
+Insert a list of analytics for different websites. The analytics must be in DB format.
+
+##### POST Body
+
+```JavaScript
+{
+    "list": [
+        {
+            "website": "website-1",
+            "time": 1450098642,
+            "ip": "127.0.0.1",
+            "event": "download",
+            "path": "/somewhere",
+            "platform": "Apple Mac",
+            "refererDomain": "www.gitbook.com",
+            "countryCode": "fr"
+        },
+        {
+            "website": "website-2",
+            "time": 0,
+            "ip": "127.0.0.1",
+            "event": "login",
+            "path": "/someplace",
+            "platform": "Linux",
+            "refererDomain": "www.gitbook.com",
+            "countryCode": "us"
+        }
+    ]
+}
+```
+
+The same rules as above apply for `time` and `countryCode` with this m
 
 ### DELETE requests
 
