@@ -347,14 +347,3 @@ The same rules as above apply for `time` and `countryCode` with this m
 
 Fully delete a shard from the file system.
 
-
-## GeoLite2 data file
-
-The [Maxmind's GeoLite2 DB](http://dev.maxmind.com/geoip/geoip2/geolite2/) is pre-compiled in the source files using [go-bindata](https://github.com/jteeuwen/go-bindata).
-The go file can be found in `/utils/geoip/data/geolite2db.go`.
-
-To refresh `geolite2db.go` from a new `GeoLite2-Country.mmdb` file, go to the `/utils/geoip/data` folder and run:
-
-```Shell
-$ go generate
-```
