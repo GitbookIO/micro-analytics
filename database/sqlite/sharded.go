@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GitbookIO/go-diskache"
+	"github.com/GitbookIO/diskache"
 
 	"github.com/GitbookIO/micro-analytics/database"
 	"github.com/GitbookIO/micro-analytics/database/errors"
