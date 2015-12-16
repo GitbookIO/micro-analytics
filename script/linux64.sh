@@ -10,6 +10,9 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )
 # Change to current dir
 cd ${DIR}
 
+# Rename main Dockerfile
+mv ./Dockerfile ./.Dockerfile
+
 # Copy Dockerfile
 cp script/linux64.Dockerfile ./Dockerfile
 
@@ -40,3 +43,6 @@ docker rmi -f "${image_id}"
 
 # Remove copied Dockerfile
 rm "${DIR}/Dockerfile"
+
+# Rename main Dockerfile
+mv ./.Dockerfile ./Dockerfile
