@@ -1,3 +1,4 @@
 /utils/geoip/data/geolite2db.go
 /analytics
 /micro-analytics
+script/build/
