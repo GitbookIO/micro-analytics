@@ -100,15 +100,14 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 			}
 
 			// Get DB shard from manager
-			db, err := driver.DBManager.GetDB(shardPath)
+			db, err := driver.DBManager.Acquire(shardPath)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
 
 			// Return query result
-			db.Lock()
-			shardAnalytics, err = query.Query(db.Conn, params.TimeRange)
-			db.Unlock()
+			shardAnalytics, err = query.Query(db.DB, params.TimeRange)
+			driver.DBManager.Release(db)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
@@ -191,15 +190,14 @@ func (driver *Sharded) Count(params database.Params) (*database.Count, error) {
 			}
 
 			// Get DB shard from manager
-			db, err := driver.DBManager.GetDB(shardPath)
+			db, err := driver.DBManager.Acquire(shardPath)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
 
 			// Launch query
-			db.Lock()
-			shardAnalytics, err = query.Count(db.Conn, params.TimeRange)
-			db.Unlock()
+			shardAnalytics, err = query.Count(db.DB, params.TimeRange)
+			driver.DBManager.Release(db)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
@@ -283,23 +281,21 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 			}
 
 			// Get DB shard from manager
-			db, err := driver.DBManager.GetDB(shardPath)
+			db, err := driver.DBManager.Acquire(shardPath)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
 
 			// Check for unique query parameter to call function accordingly
 			if params.Unique {
-				db.Lock()
-				shardAnalytics, err = query.GroupByUniq(db.Conn, params.Property, params.TimeRange)
-				db.Unlock()
+				shardAnalytics, err = query.GroupByUniq(db.DB, params.Property, params.TimeRange)
+				driver.DBManager.Release(db)
 				if err != nil {
 					return nil, &errors.InternalError
 				}
 			} else {
-				db.Lock()
-				shardAnalytics, err = query.GroupBy(db.Conn, params.Property, params.TimeRange)
-				db.Unlock()
+				shardAnalytics, err = query.GroupBy(db.DB, params.Property, params.TimeRange)
+				driver.DBManager.Release(db)
 				if err != nil {
 					return nil, &errors.InternalError
 				}
@@ -394,21 +390,21 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 			}
 
 			// Get DB shard from manager
-			db, err := driver.DBManager.GetDB(shardPath)
+			db, err := driver.DBManager.Acquire(shardPath)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
 
 			// Check for unique query parameter to call function accordingly
 			if params.Unique {
-				db.Lock()
-				shardAnalytics, err = query.SeriesUniq(db.Conn, params.Interval, params.TimeRange)
-				db.Unlock()
+				shardAnalytics, err = query.SeriesUniq(db.DB, params.Interval, params.TimeRange)
+				driver.DBManager.Release(db)
 				if err != nil {
 					return nil, &errors.InternalError
 				}
 			} else {
-				shardAnalytics, err = query.Series(db.Conn, params.Interval, params.TimeRange)
+				shardAnalytics, err = query.Series(db.DB, params.Interval, params.TimeRange)
+				driver.DBManager.Release(db)
 				if err != nil {
 					return nil, &errors.InternalError
 				}
@@ -446,15 +442,14 @@ func (driver *Sharded) Insert(params database.Params, analytic database.Analytic
 	}
 
 	// Get DB from manager
-	db, err := driver.DBManager.GetDB(shardPath)
+	db, err := driver.DBManager.Acquire(shardPath)
 	if err != nil {
 		return &errors.InternalError
 	}
 
 	// Insert data if everything's OK
-	db.Lock()
-	err = query.Insert(db.Conn, analytic)
-	db.Unlock()
+	err = query.Insert(db.DB, analytic)
+	driver.DBManager.Release(db)
 
 	if err != nil {
 		return &errors.InsertFailed

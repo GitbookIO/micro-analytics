@@ -40,13 +40,14 @@ func (driver *SQLite) Query(params database.Params) (*database.Analytics, error)
 	}
 
 	// Get DB from manager
-	db, err := driver.DBManager.GetDB(dbPath)
+	db, err := driver.DBManager.Acquire(dbPath)
 	if err != nil {
 		return nil, &errors.InternalError
 	}
 
 	// Return query result
-	analytics, err := query.Query(db.Conn, params.TimeRange)
+	analytics, err := query.Query(db.DB, params.TimeRange)
+	driver.DBManager.Release(db)
 	if err != nil {
 		return nil, &errors.InternalError
 	}
@@ -73,13 +74,14 @@ func (driver *SQLite) Count(params database.Params) (*database.Count, error) {
 	}
 
 	// Get DB from manager
-	db, err := driver.DBManager.GetDB(dbPath)
+	db, err := driver.DBManager.Acquire(dbPath)
 	if err != nil {
 		return nil, &errors.InternalError
 	}
 
 	// Return query result
-	analytics, err := query.Count(db.Conn, params.TimeRange)
+	analytics, err := query.Count(db.DB, params.TimeRange)
+	driver.DBManager.Release(db)
 	if err != nil {
 		return nil, &errors.InternalError
 	}
@@ -106,7 +108,7 @@ func (driver *SQLite) GroupBy(params database.Params) (*database.Aggregates, err
 	}
 
 	// Get DB from manager
-	db, err := driver.DBManager.GetDB(dbPath)
+	db, err := driver.DBManager.Acquire(dbPath)
 	if err != nil {
 		return nil, &errors.InternalError
 	}
@@ -115,12 +117,14 @@ func (driver *SQLite) GroupBy(params database.Params) (*database.Aggregates, err
 	var analytics *database.Aggregates
 
 	if params.Unique {
-		analytics, err = query.GroupByUniq(db.Conn, params.Property, params.TimeRange)
+		analytics, err = query.GroupByUniq(db.DB, params.Property, params.TimeRange)
+		driver.DBManager.Release(db)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
 	} else {
-		analytics, err = query.GroupBy(db.Conn, params.Property, params.TimeRange)
+		analytics, err = query.GroupBy(db.DB, params.Property, params.TimeRange)
+		driver.DBManager.Release(db)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
@@ -148,7 +152,7 @@ func (driver *SQLite) Series(params database.Params) (*database.Intervals, error
 	}
 
 	// Get DB from manager
-	db, err := driver.DBManager.GetDB(dbPath)
+	db, err := driver.DBManager.Acquire(dbPath)
 	if err != nil {
 		return nil, &errors.InternalError
 	}
@@ -157,12 +161,14 @@ func (driver *SQLite) Series(params database.Params) (*database.Intervals, error
 	var analytics *database.Intervals
 
 	if params.Unique {
-		analytics, err = query.SeriesUniq(db.Conn, params.Interval, params.TimeRange)
+		analytics, err = query.SeriesUniq(db.DB, params.Interval, params.TimeRange)
+		driver.DBManager.Release(db)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
 	} else {
-		analytics, err = query.Series(db.Conn, params.Interval, params.TimeRange)
+		analytics, err = query.Series(db.DB, params.Interval, params.TimeRange)
+		driver.DBManager.Release(db)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
@@ -179,13 +185,14 @@ func (driver *SQLite) Insert(params database.Params, analytic database.Analytic)
 	}
 
 	// Get DB from manager
-	db, err := driver.DBManager.GetDB(dbPath)
+	db, err := driver.DBManager.Acquire(dbPath)
 	if err != nil {
 		return &errors.InternalError
 	}
 
 	// Insert data if everything's OK
-	err = query.Insert(db.Conn, analytic)
+	err = query.Insert(db.DB, analytic)
+	driver.DBManager.Release(db)
 
 	if err != nil {
 		return &errors.InsertFailed
