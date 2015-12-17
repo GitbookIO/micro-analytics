@@ -53,7 +53,7 @@ func Query(db *sql.DB, timeRange *database.TimeRange) (*database.Analytics, erro
 			&analytic.RefererDomain,
 			&analytic.CountryCode)
 
-		analytic.Time = time.Unix(analyticTime, 0)
+		analytic.Time = time.Unix(analyticTime, 0).UTC()
 		analytics.List = append(analytics.List, analytic)
 	}
 
