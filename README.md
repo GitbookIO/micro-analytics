@@ -46,7 +46,7 @@ Parameter | Environment Variable | Usage | Type | Default Value
 
 If `--user` is provided, the service will automatically use [basic access authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) on all requests.
 
-The cache directory is always placed in the root directory.
+The cache directory is always placed in the root directory and is suffixed with app major version. The default will then be `./dbs/.diskache0`.
 
 ## Analytics schema
 
