@@ -6,7 +6,7 @@ import (
 
 func Platform(ua string) string {
 	// Default value
-	platform := "unknown"
+	platform := ""
 
 	// Map of Regexp
 	platforms := map[*regexp.Regexp]string{
