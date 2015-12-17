@@ -104,10 +104,10 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 			if err != nil {
 				return nil, &errors.InternalError
 			}
+			defer driver.DBManager.Release(db)
 
 			// Return query result
 			shardAnalytics, err = query.Query(db.DB, params.TimeRange)
-			driver.DBManager.Release(db)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
@@ -194,10 +194,10 @@ func (driver *Sharded) Count(params database.Params) (*database.Count, error) {
 			if err != nil {
 				return nil, &errors.InternalError
 			}
+			defer driver.DBManager.Release(db)
 
 			// Launch query
 			shardAnalytics, err = query.Count(db.DB, params.TimeRange)
-			driver.DBManager.Release(db)
 			if err != nil {
 				return nil, &errors.InternalError
 			}
@@ -285,17 +285,16 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 			if err != nil {
 				return nil, &errors.InternalError
 			}
+			defer driver.DBManager.Release(db)
 
 			// Check for unique query parameter to call function accordingly
 			if params.Unique {
 				shardAnalytics, err = query.GroupByUniq(db.DB, params.Property, params.TimeRange)
-				driver.DBManager.Release(db)
 				if err != nil {
 					return nil, &errors.InternalError
 				}
 			} else {
 				shardAnalytics, err = query.GroupBy(db.DB, params.Property, params.TimeRange)
-				driver.DBManager.Release(db)
 				if err != nil {
 					return nil, &errors.InternalError
 				}
@@ -394,17 +393,16 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 			if err != nil {
 				return nil, &errors.InternalError
 			}
+			defer driver.DBManager.Release(db)
 
 			// Check for unique query parameter to call function accordingly
 			if params.Unique {
 				shardAnalytics, err = query.SeriesUniq(db.DB, params.Interval, params.TimeRange)
-				driver.DBManager.Release(db)
 				if err != nil {
 					return nil, &errors.InternalError
 				}
 			} else {
 				shardAnalytics, err = query.Series(db.DB, params.Interval, params.TimeRange)
-				driver.DBManager.Release(db)
 				if err != nil {
 					return nil, &errors.InternalError
 				}
@@ -446,10 +444,10 @@ func (driver *Sharded) Insert(params database.Params, analytic database.Analytic
 	if err != nil {
 		return &errors.InternalError
 	}
+	defer driver.DBManager.Release(db)
 
 	// Insert data if everything's OK
 	err = query.Insert(db.DB, analytic)
-	driver.DBManager.Release(db)
 
 	if err != nil {
 		return &errors.InsertFailed

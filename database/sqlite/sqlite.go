@@ -44,10 +44,10 @@ func (driver *SQLite) Query(params database.Params) (*database.Analytics, error)
 	if err != nil {
 		return nil, &errors.InternalError
 	}
+	defer driver.DBManager.Release(db)
 
 	// Return query result
 	analytics, err := query.Query(db.DB, params.TimeRange)
-	driver.DBManager.Release(db)
 	if err != nil {
 		return nil, &errors.InternalError
 	}
@@ -78,10 +78,10 @@ func (driver *SQLite) Count(params database.Params) (*database.Count, error) {
 	if err != nil {
 		return nil, &errors.InternalError
 	}
+	defer driver.DBManager.Release(db)
 
 	// Return query result
 	analytics, err := query.Count(db.DB, params.TimeRange)
-	driver.DBManager.Release(db)
 	if err != nil {
 		return nil, &errors.InternalError
 	}
@@ -112,19 +112,18 @@ func (driver *SQLite) GroupBy(params database.Params) (*database.Aggregates, err
 	if err != nil {
 		return nil, &errors.InternalError
 	}
+	defer driver.DBManager.Release(db)
 
 	// Check for unique query parameter to call function accordingly
 	var analytics *database.Aggregates
 
 	if params.Unique {
 		analytics, err = query.GroupByUniq(db.DB, params.Property, params.TimeRange)
-		driver.DBManager.Release(db)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
 	} else {
 		analytics, err = query.GroupBy(db.DB, params.Property, params.TimeRange)
-		driver.DBManager.Release(db)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
@@ -156,19 +155,18 @@ func (driver *SQLite) Series(params database.Params) (*database.Intervals, error
 	if err != nil {
 		return nil, &errors.InternalError
 	}
+	defer driver.DBManager.Release(db)
 
 	// Check for unique query parameter to call function accordingly
 	var analytics *database.Intervals
 
 	if params.Unique {
 		analytics, err = query.SeriesUniq(db.DB, params.Interval, params.TimeRange)
-		driver.DBManager.Release(db)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
 	} else {
 		analytics, err = query.Series(db.DB, params.Interval, params.TimeRange)
-		driver.DBManager.Release(db)
 		if err != nil {
 			return nil, &errors.InternalError
 		}
@@ -189,10 +187,10 @@ func (driver *SQLite) Insert(params database.Params, analytic database.Analytic)
 	if err != nil {
 		return &errors.InternalError
 	}
+	defer driver.DBManager.Release(db)
 
 	// Insert data if everything's OK
 	err = query.Insert(db.DB, analytic)
-	driver.DBManager.Release(db)
 
 	if err != nil {
 		return &errors.InsertFailed
