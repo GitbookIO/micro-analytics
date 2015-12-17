@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/url"
-	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -28,10 +27,8 @@ type Sharded struct {
 func NewShardedDriver(driverOpts database.DriverOpts) (*Sharded, error) {
 	manager := manager.New(manager.Opts{driverOpts})
 
-	// Set cache directory in driver directory
-	cacheDir := path.Join(driverOpts.Directory, driverOpts.CacheDirectory)
 	cacheOpts := &diskache.Opts{
-		Directory: cacheDir,
+		Directory: driverOpts.CacheDirectory,
 	}
 	cache, err := diskache.New(cacheOpts)
 	if err != nil {

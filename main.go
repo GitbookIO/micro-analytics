@@ -68,11 +68,19 @@ func main() {
 
 	// Main app code
 	app.Action = func(ctx *cli.Context) {
-		// Extract options from CLI args
+		// Format cache directory
+		// -> Must be inside root directory
+		// -> Is suffixed with app major version
+		rootDir := path.Clean(ctx.String("root"))
+		cacheDir := path.Clean(ctx.String("cache-directory"))
+		cacheDir += string(app.Version[0])
+		cacheDir = path.Join(rootDir, cacheDir)
+
+		// Set driver options
 		driverOpts := database.DriverOpts{
-			Directory:      path.Clean(ctx.String("root")),
+			Directory:      rootDir,
+			CacheDirectory: cacheDir,
 			MaxDBs:         ctx.Int("connections"),
-			CacheDirectory: ctx.String("cache-directory"),
 			ClosingChannel: make(chan bool, 1),
 		}
 
