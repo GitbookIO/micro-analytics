@@ -537,7 +537,7 @@ func getReferrer(headers map[string]string) string {
 	refererRegexp := regexp.MustCompile(`(?i)referr?er`)
 
 	// Default value
-	referer := "unknown"
+	referer := ""
 
 	for header, value := range headers {
 		if refererRegexp.MatchString(header) {
@@ -554,7 +554,7 @@ func getUserAgent(headers map[string]string) string {
 	userAgentRegexp := regexp.MustCompile(`(?i)user-agent`)
 
 	// Default value
-	userAgent := "unknown"
+	userAgent := ""
 
 	for header, value := range headers {
 		if userAgentRegexp.MatchString(header) {
