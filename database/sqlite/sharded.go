@@ -3,6 +3,7 @@ package sqlite
 import (
 	"io/ioutil"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -323,10 +324,15 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 		}
 	}
 
-	// Convert analyticsMap to an Aggregates struct
+	// Convert analyticsMap to an AggregateList struct
+	aggregateList := database.AggregateList{}
 	for _, analytic := range analyticsMap {
-		analytics.List = append(analytics.List, analytic)
+		aggregateList = append(aggregateList, analytic)
 	}
+
+	// Sort and set
+	sort.Sort(aggregateList)
+	analytics.List = aggregateList
 
 	return &analytics, nil
 }
