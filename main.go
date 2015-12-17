@@ -45,7 +45,7 @@ func main() {
 			EnvVar: "MA_PORT",
 		},
 		cli.StringFlag{
-			Name:   "directory, d",
+			Name:   "root, r",
 			Value:  "./dbs/",
 			Usage:  "Database directory",
 			EnvVar: "MA_ROOT",
@@ -56,11 +56,11 @@ func main() {
 			Usage:  "Max number of alive DB connections",
 			EnvVar: "MA_POOL_SIZE",
 		},
-		cli.IntFlag{
-			Name:   "cache-size, s",
-			Value:  100000,
-			Usage:  "Max number of cached requests",
-			EnvVar: "MA_CACHE_SIZE",
+		cli.StringFlag{
+			Name:   "cache-directory, d",
+			Value:  "diskache",
+			Usage:  "Cache directory",
+			EnvVar: "MA_CACHE_DIR",
 		},
 	}
 
@@ -70,9 +70,9 @@ func main() {
 	app.Action = func(ctx *cli.Context) {
 		// Extract options from CLI args
 		driverOpts := database.DriverOpts{
-			Directory:      path.Clean(ctx.String("directory")),
+			Directory:      path.Clean(ctx.String("root")),
 			MaxDBs:         ctx.Int("connections"),
-			CacheSize:      ctx.Int("cache-size"),
+			CacheDirectory: ctx.String("cache-directory"),
 			ClosingChannel: make(chan bool, 1),
 		}
 

@@ -40,9 +40,9 @@ Parameter | Environment Variable | Usage | Type | Default Value
 `--user, -u` | `MA_USER` | Username for basic auth | String | `""`
 `--password, -w` | `MA_PASSWORD` | Password for basic auth | String | `""`
 `--port, -p` | `MA_PORT` | Port to listen on | String | `"7070"`
-`--directory, -d` | `MA_ROOT` | Database directory | String | `"./dbs"`
+`--root, -r` | `MA_ROOT` | Database directory | String | `"./dbs"`
 `--connections, -c` | `MA_POOL_SIZE` | Max number of alive shards connections | Number | `10`
-`--cache-size, -s` | `MA_CACHE_SIZE` | Max number of cached requests | Number | `100000`
+`--cache-directory, -d` | `MA_CACHE_DIR` | Cache directory | String | `"diskache"`
 
 If `--user` is provided, the service will automatically use [basic access authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) on all requests.
 

@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"net/url"
 	"sort"
@@ -8,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/golang-lru"
+	"github.com/GitbookIO/diskache"
 
 	"github.com/GitbookIO/micro-analytics/database"
 	"github.com/GitbookIO/micro-analytics/database/errors"
@@ -20,13 +21,16 @@ import (
 type Sharded struct {
 	DBManager *manager.DBManager
 	directory string
-	cache     *lru.Cache
+	cache     *diskache.Diskache
 }
 
 func NewShardedDriver(driverOpts database.DriverOpts) (*Sharded, error) {
 	manager := manager.New(manager.Opts{driverOpts})
 
-	cache, err := lru.New(driverOpts.CacheSize)
+	cacheOpts := &diskache.Opts{
+		Directory: driverOpts.CacheDirectory,
+	}
+	cache, err := diskache.New(cacheOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -88,9 +92,10 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 
 		cached, inCache := driver.cache.Get(cacheURL)
 		if inCache {
-			var ok bool
-			if shardAnalytics, ok = cached.(*database.Analytics); !ok {
-				return nil, &errors.InternalError
+			err = json.Unmarshal(cached, &shardAnalytics)
+			if err != nil {
+				driver.DBManager.Logger.Error("Error unmarshaling from cache: %v\n", err)
+				return nil, err
 			}
 		} else {
 			// Else query shard
@@ -116,7 +121,12 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 
 			// Set shard result in cache if asked
 			if cachedRequest {
-				driver.cache.Add(cacheURL, shardAnalytics)
+				if data, err := json.Marshal(shardAnalytics); err == nil {
+					err = driver.cache.Set(cacheURL, data)
+					if err != nil {
+						driver.DBManager.Logger.Error("Error adding to cache: %v\n", err)
+					}
+				}
 			}
 		}
 
@@ -179,9 +189,10 @@ func (driver *Sharded) Count(params database.Params) (*database.Count, error) {
 
 		cached, inCache := driver.cache.Get(cacheURL)
 		if inCache {
-			var ok bool
-			if shardAnalytics, ok = cached.(*database.Count); !ok {
-				return nil, &errors.InternalError
+			err = json.Unmarshal(cached, &shardAnalytics)
+			if err != nil {
+				driver.DBManager.Logger.Error("Error unmarshaling from cache: %v\n", err)
+				return nil, err
 			}
 		} else {
 			// Else query shard
@@ -207,7 +218,12 @@ func (driver *Sharded) Count(params database.Params) (*database.Count, error) {
 
 			// Set shard result in cache if asked
 			if cachedRequest {
-				driver.cache.Add(cacheURL, shardAnalytics)
+				if data, err := json.Marshal(shardAnalytics); err == nil {
+					err = driver.cache.Set(cacheURL, data)
+					if err != nil {
+						driver.DBManager.Logger.Error("Error adding to cache: %v\n", err)
+					}
+				}
 			}
 		}
 
@@ -271,9 +287,10 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 
 		cached, inCache := driver.cache.Get(cacheURL)
 		if inCache {
-			var ok bool
-			if shardAnalytics, ok = cached.(*database.Aggregates); !ok {
-				return nil, &errors.InternalError
+			err = json.Unmarshal(cached, &shardAnalytics)
+			if err != nil {
+				driver.DBManager.Logger.Error("Error unmarshaling from cache: %v\n", err)
+				return nil, err
 			}
 		} else {
 			// Else query shard
@@ -308,7 +325,12 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 
 			// Set shard result in cache if asked
 			if cachedRequest {
-				driver.cache.Add(cacheURL, shardAnalytics)
+				if data, err := json.Marshal(shardAnalytics); err == nil {
+					err = driver.cache.Set(cacheURL, data)
+					if err != nil {
+						driver.DBManager.Logger.Error("Error adding to cache: %v\n", err)
+					}
+				}
 			}
 		}
 
@@ -387,9 +409,10 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 
 		cached, inCache := driver.cache.Get(cacheURL)
 		if inCache {
-			var ok bool
-			if shardAnalytics, ok = cached.(*database.Intervals); !ok {
-				return nil, &errors.InternalError
+			err = json.Unmarshal(cached, &shardAnalytics)
+			if err != nil {
+				driver.DBManager.Logger.Error("Error unmarshaling from cache: %v\n", err)
+				return nil, err
 			}
 		} else {
 			// Else query shard
@@ -422,7 +445,12 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 
 			// Set shard result in cache if asked
 			if cachedRequest {
-				driver.cache.Add(cacheURL, shardAnalytics)
+				if data, err := json.Marshal(shardAnalytics); err == nil {
+					err = driver.cache.Set(cacheURL, data)
+					if err != nil {
+						driver.DBManager.Logger.Error("Error adding to cache: %v\n", err)
+					}
+				}
 			}
 		}
 
