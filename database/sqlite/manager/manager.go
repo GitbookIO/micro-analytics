@@ -28,9 +28,10 @@ type DBManager struct {
 func New(opts Opts) *DBManager {
 	// Configure sqlPool
 	poolOpts := sqlpool.Opts{
-		Max:      int64(opts.MaxDBs),
-		PreInit:  createDirectory,
-		PostInit: initializeDatabase,
+		Max:         int64(opts.MaxDBs),
+		IdleTimeout: int64(opts.IdleTimeout),
+		PreInit:     createDirectory,
+		PostInit:    initializeDatabase,
 	}
 	pool := sqlpool.NewPool(poolOpts)
 

@@ -18,6 +18,7 @@ type Driver interface {
 type DriverOpts struct {
 	Directory      string
 	MaxDBs         int
+	IdleTimeout    int
 	CacheSize      int
 	ClosingChannel chan bool
 }

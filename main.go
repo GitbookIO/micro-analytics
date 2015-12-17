@@ -52,9 +52,15 @@ func main() {
 		},
 		cli.IntFlag{
 			Name:   "connections, c",
-			Value:  10,
+			Value:  1000,
 			Usage:  "Max number of alive DB connections",
 			EnvVar: "MA_POOL_SIZE",
+		},
+		cli.IntFlag{
+			Name:   "idle-timeout, i",
+			Value:  60,
+			Usage:  "Idle timeout for DB connections in seconds",
+			EnvVar: "MA_TIMEOUT",
 		},
 		cli.IntFlag{
 			Name:   "cache-size, s",
@@ -72,6 +78,7 @@ func main() {
 		driverOpts := database.DriverOpts{
 			Directory:      path.Clean(ctx.String("directory")),
 			MaxDBs:         ctx.Int("connections"),
+			IdleTimeout:    ctx.Int("idle-timeout"),
 			CacheSize:      ctx.Int("cache-size"),
 			ClosingChannel: make(chan bool, 1),
 		}
