@@ -60,7 +60,7 @@ func main() {
 			Name:   "idle-timeout, i",
 			Value:  60,
 			Usage:  "Idle timeout for DB connections in seconds",
-			EnvVar: "MA_TIMEOUT",
+			EnvVar: "MA_POOL_TIMEOUT",
 		},
 		cli.StringFlag{
 			Name:   "cache-directory, d",
@@ -74,17 +74,12 @@ func main() {
 
 	// Main app code
 	app.Action = func(ctx *cli.Context) {
-		// Format cache directory
-		// -> Must be inside root directory
-		// -> Is suffixed with app major version
-		rootDir := path.Clean(ctx.String("root"))
 		cacheDir := path.Clean(ctx.String("cache-directory"))
-		cacheDir += string(app.Version[0])
-		cacheDir = path.Join(rootDir, cacheDir)
+		cacheDir = path.Join(cacheDir, strings.Split(app.Version, ".")[0])
 
 		// Set driver options
 		driverOpts := database.DriverOpts{
-			Directory:      rootDir,
+			Directory:      path.Clean(ctx.String("root")),
 			CacheDirectory: cacheDir,
 			MaxDBs:         ctx.Int("connections"),
 			IdleTimeout:    ctx.Int("idle-timeout"),
