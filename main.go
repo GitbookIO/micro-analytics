@@ -58,7 +58,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:   "cache-directory, d",
-			Value:  "diskache",
+			Value:  ".diskache",
 			Usage:  "Cache directory",
 			EnvVar: "MA_CACHE_DIR",
 		},

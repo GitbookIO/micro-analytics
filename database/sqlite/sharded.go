@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/url"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -27,8 +28,10 @@ type Sharded struct {
 func NewShardedDriver(driverOpts database.DriverOpts) (*Sharded, error) {
 	manager := manager.New(manager.Opts{driverOpts})
 
+	// Set cache directory in driver directory
+	cacheDir := path.Join(driverOpts.Directory, driverOpts.CacheDirectory)
 	cacheOpts := &diskache.Opts{
-		Directory: driverOpts.CacheDirectory,
+		Directory: cacheDir,
 	}
 	cache, err := diskache.New(cacheOpts)
 	if err != nil {
@@ -116,6 +119,7 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 			shardAnalytics, err = query.Query(db.Conn, params.TimeRange)
 			db.Unlock()
 			if err != nil {
+				driver.DBManager.Logger.Error("Error executing Query on DB %s: %v\n", shardPath, err)
 				return nil, &errors.InternalError
 			}
 
@@ -213,6 +217,7 @@ func (driver *Sharded) Count(params database.Params) (*database.Count, error) {
 			shardAnalytics, err = query.Count(db.Conn, params.TimeRange)
 			db.Unlock()
 			if err != nil {
+				driver.DBManager.Logger.Error("Error executing Count on DB %s: %v\n", shardPath, err)
 				return nil, &errors.InternalError
 			}
 
@@ -312,6 +317,7 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 				shardAnalytics, err = query.GroupByUniq(db.Conn, params.Property, params.TimeRange)
 				db.Unlock()
 				if err != nil {
+					driver.DBManager.Logger.Error("Error executing GroupByUniq on DB %s: %v\n", shardPath, err)
 					return nil, &errors.InternalError
 				}
 			} else {
@@ -319,6 +325,7 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 				shardAnalytics, err = query.GroupBy(db.Conn, params.Property, params.TimeRange)
 				db.Unlock()
 				if err != nil {
+					driver.DBManager.Logger.Error("Error executing GroupBy on DB %s: %v\n", shardPath, err)
 					return nil, &errors.InternalError
 				}
 			}
@@ -434,11 +441,13 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 				shardAnalytics, err = query.SeriesUniq(db.Conn, params.Interval, params.TimeRange)
 				db.Unlock()
 				if err != nil {
+					driver.DBManager.Logger.Error("Error executing SeriesUniq on DB %s: %v\n", shardPath, err)
 					return nil, &errors.InternalError
 				}
 			} else {
 				shardAnalytics, err = query.Series(db.Conn, params.Interval, params.TimeRange)
 				if err != nil {
+					driver.DBManager.Logger.Error("Error executing Series on DB %s: %v\n", shardPath, err)
 					return nil, &errors.InternalError
 				}
 			}
