@@ -52,7 +52,7 @@ func main() {
 		},
 		cli.IntFlag{
 			Name:   "connections, c",
-			Value:  10,
+			Value:  1000,
 			Usage:  "Max number of alive DB connections",
 			EnvVar: "MA_POOL_SIZE",
 		},
@@ -61,6 +61,18 @@ func main() {
 			Value:  ".diskache",
 			Usage:  "Cache directory",
 			EnvVar: "MA_CACHE_DIR",
+		},
+		cli.IntFlag{
+			Name:   "idle-timeout, i",
+			Value:  60,
+			Usage:  "Idle timeout for DB connections in seconds",
+			EnvVar: "MA_TIMEOUT",
+		},
+		cli.IntFlag{
+			Name:   "cache-size, s",
+			Value:  100000,
+			Usage:  "Max number of cached requests",
+			EnvVar: "MA_CACHE_SIZE",
 		},
 	}
 
@@ -81,6 +93,8 @@ func main() {
 			Directory:      rootDir,
 			CacheDirectory: cacheDir,
 			MaxDBs:         ctx.Int("connections"),
+			IdleTimeout:    ctx.Int("idle-timeout"),
+			CacheSize:      ctx.Int("cache-size"),
 			ClosingChannel: make(chan bool, 1),
 		}
 

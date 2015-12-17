@@ -20,4 +20,7 @@ type DriverOpts struct {
 	ClosingChannel chan bool
 	Directory      string
 	MaxDBs         int
+	IdleTimeout    int
+	CacheSize      int
+	ClosingChannel chan bool
 }
