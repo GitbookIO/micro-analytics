@@ -59,3 +59,18 @@ type TimeRange struct {
 	Start time.Time
 	End   time.Time
 }
+
+// Define an alias of []Aggregate to implement sort
+type AggregateList []Aggregate
+
+func (l AggregateList) Len() int {
+	return len(l)
+}
+func (l AggregateList) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
+
+// AggregateList will be ordered by Total descending
+func (l AggregateList) Less(i, j int) bool {
+	return l[i].Total > l[j].Total
+}
