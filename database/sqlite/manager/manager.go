@@ -28,7 +28,7 @@ type DBManager struct {
 func New(opts Opts) *DBManager {
 	// Configure sqlPool
 	poolOpts := sqlpool.Opts{
-		Max:      opts.MaxDBs,
+		Max:      int64(opts.MaxDBs),
 		PreInit:  createDirectory,
 		PostInit: initializeDatabase,
 	}
@@ -44,7 +44,7 @@ func New(opts Opts) *DBManager {
 	// Handle closing connections when app is killed
 	go func() {
 		<-opts.ClosingChannel
-
+		manager.Pool.ForceClose()
 		opts.ClosingChannel <- true
 	}()
 
