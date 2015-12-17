@@ -51,8 +51,8 @@ func Series(db *sql.DB, interval int, timeRange *database.TimeRange) (*database.
 		rows.Scan(&startTime, &result.Total)
 
 		// Format Start and End from TIMESTAMP to ISO time
-		result.Start = time.Unix(int64(startTime), 0).Format(time.RFC3339)
-		result.End = time.Unix(int64(startTime+interval), 0).Format(time.RFC3339)
+		result.Start = time.Unix(int64(startTime), 0).UTC().Format(time.RFC3339)
+		result.End = time.Unix(int64(startTime+interval), 0).UTC().Format(time.RFC3339)
 
 		intervals.List = append(intervals.List, result)
 	}
@@ -128,8 +128,8 @@ func SeriesUniq(db *sql.DB, interval int, timeRange *database.TimeRange) (*datab
 		rows.Scan(&startTime, &result.Total, &result.Unique)
 
 		// Format Start and End from TIMESTAMP to ISO time
-		result.Start = time.Unix(int64(startTime), 0).Format(time.RFC3339)
-		result.End = time.Unix(int64(startTime+interval), 0).Format(time.RFC3339)
+		result.Start = time.Unix(int64(startTime), 0).UTC().Format(time.RFC3339)
+		result.End = time.Unix(int64(startTime+interval), 0).UTC().Format(time.RFC3339)
 
 		intervals.List = append(intervals.List, result)
 	}

@@ -303,7 +303,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 		for _, postData := range postList.List {
 			// Create Analytic to inject in DB
 			analytic := database.Analytic{
-				Time:          time.Unix(int64(postData.Time), 0),
+				Time:          time.Unix(int64(postData.Time), 0).UTC(),
 				Event:         postData.Event,
 				Path:          postData.Path,
 				Ip:            postData.Ip,
@@ -367,8 +367,9 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 
 		// Set time from POST data if passed
 		if len(postData.Time) > 0 {
-			analytic.Time, err = time.Parse(time.RFC3339, postData.Time)
+			analytic.Time, _ = time.Parse(time.RFC3339, postData.Time)
 		}
+		analytic.Time = analytic.Time.UTC()
 
 		// Set analytic referer domain
 		refererHeader := getReferrer(postData.Headers)
@@ -424,7 +425,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 		for _, postData := range postList.List {
 			// Create Analytic to inject in DB
 			analytic := database.Analytic{
-				Time:          time.Unix(int64(postData.Time), 0),
+				Time:          time.Unix(int64(postData.Time), 0).UTC(),
 				Event:         postData.Event,
 				Path:          postData.Path,
 				Ip:            postData.Ip,
@@ -528,7 +529,7 @@ func parseTime(timeStr string) (time.Time, error) {
 		// Try to parse as RFC1123
 		timeValue, err = time.Parse(time.RFC1123, timeStr)
 	}
-	return timeValue, err
+	return timeValue.UTC(), err
 }
 
 // Extract Referer from passed headers

@@ -85,7 +85,7 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 		// Get result if is cached
 		var shardAnalytics *database.Analytics
 
-		cacheURL, err := formatURLForCache(params.URL, shardInt, startInt, endInt)
+		cacheURL, err := formatURLForCache(params.URL, shardInt, startInt, endInt, params.TimeRange)
 		if err != nil {
 			return nil, err
 		}
@@ -183,7 +183,7 @@ func (driver *Sharded) Count(params database.Params) (*database.Count, error) {
 		// Get result if is cached
 		var shardAnalytics *database.Count
 
-		cacheURL, err := formatURLForCache(params.URL, shardInt, startInt, endInt)
+		cacheURL, err := formatURLForCache(params.URL, shardInt, startInt, endInt, params.TimeRange)
 		if err != nil {
 			return nil, err
 		}
@@ -282,7 +282,7 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 		// Get result if is cached
 		var shardAnalytics *database.Aggregates
 
-		cacheURL, err := formatURLForCache(params.URL, shardInt, startInt, endInt)
+		cacheURL, err := formatURLForCache(params.URL, shardInt, startInt, endInt, params.TimeRange)
 		if err != nil {
 			return nil, err
 		}
@@ -406,7 +406,7 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 		// Get result if is cached
 		var shardAnalytics *database.Intervals
 
-		cacheURL, err := formatURLForCache(params.URL, shardInt, startInt, endInt)
+		cacheURL, err := formatURLForCache(params.URL, shardInt, startInt, endInt, params.TimeRange)
 		if err != nil {
 			return nil, err
 		}
@@ -588,12 +588,17 @@ func timeRangeToInt(timeRange *database.TimeRange) (int, int) {
 
 // Format URL for a specific shard
 // Basically, remove start/end if is is before/after shard time
-func formatURLForCache(uRL *url.URL, shardName int, startMonth int, endMonth int) (string, error) {
+func formatURLForCache(uRL *url.URL, shardName int, startMonth int, endMonth int, timeRange *database.TimeRange) (string, error) {
 	// Extract URL query parameters
 	queryParams := uRL.Query()
 
 	// Remove start
 	if startMonth < shardName {
+		queryParams.Del("start")
+	}
+
+	// Remove start if timeRange.Start is the start of current month
+	if startMonth == shardName && isStartOfMonth(timeRange.Start) {
 		queryParams.Del("start")
 	}
 
@@ -603,7 +608,7 @@ func formatURLForCache(uRL *url.URL, shardName int, startMonth int, endMonth int
 	}
 
 	// Remove cache for months before current month
-	currentMonth, err := shardNameToInt(timeToShardName(time.Now()))
+	currentMonth, err := shardNameToInt(timeToShardName(time.Now().UTC()))
 	if err != nil {
 		return "", err
 	}
@@ -620,6 +625,15 @@ func formatURLForCache(uRL *url.URL, shardName int, startMonth int, endMonth int
 	cacheURL.RawQuery = queryParams.Encode()
 
 	return cacheURL.String(), nil
+}
+
+func isStartOfMonth(t time.Time) bool {
+	y := t.Year()
+	m := t.Month()
+	d := t.Day()
+	utcLoc, _ := time.LoadLocation("UTC")
+	startOfMonth := time.Date(y, m, d, 0, 0, 0, 0, utcLoc)
+	return t.Equal(startOfMonth)
 }
 
 // Return true if cache query parameter passed
