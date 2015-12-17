@@ -70,7 +70,7 @@ func main() {
 	app.Action = func(ctx *cli.Context) {
 		// Extract options from CLI args
 		driverOpts := database.DriverOpts{
-			Directory:      path.Clean(ctx.String("directory")),
+			Directory:      path.Clean(ctx.String("root")),
 			MaxDBs:         ctx.Int("connections"),
 			CacheDirectory: ctx.String("cache-directory"),
 			ClosingChannel: make(chan bool, 1),
