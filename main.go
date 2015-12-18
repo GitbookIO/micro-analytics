@@ -42,7 +42,7 @@ func main() {
 			Name:   "port, p",
 			Value:  "7070",
 			Usage:  "Port to listen on",
-			EnvVar: "MA_PORT",
+			EnvVar: "PORT",
 		},
 		cli.StringFlag{
 			Name:   "root, r",
