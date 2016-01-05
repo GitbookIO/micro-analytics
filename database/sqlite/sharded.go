@@ -54,6 +54,7 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 	// Check if DB file exists
 	dbExists, err := driver.DBManager.DBExists(dbPath)
 	if err != nil {
+		driver.DBManager.Logger.Error("Error executing Query/DBExists on DB %s: %v\n", dbPath, err)
 		return nil, &errors.InternalError
 	}
 
@@ -108,6 +109,7 @@ func (driver *Sharded) Query(params database.Params) (*database.Analytics, error
 			// Get DB shard from manager
 			db, err := driver.DBManager.Acquire(shardPath)
 			if err != nil {
+				driver.DBManager.Logger.Error("Error executing Query/Acquire on DB %s: %v\n", shardPath, err)
 				return nil, &errors.InternalError
 			}
 			defer driver.DBManager.Release(db)
@@ -149,6 +151,7 @@ func (driver *Sharded) Count(params database.Params) (*database.Count, error) {
 	// Check if DB file exists
 	dbExists, err := driver.DBManager.DBExists(dbPath)
 	if err != nil {
+		driver.DBManager.Logger.Error("Error executing Count/DBExists on DB %s: %v\n", dbPath, err)
 		return nil, &errors.InternalError
 	}
 
@@ -205,6 +208,7 @@ func (driver *Sharded) Count(params database.Params) (*database.Count, error) {
 			// Get DB shard from manager
 			db, err := driver.DBManager.Acquire(shardPath)
 			if err != nil {
+				driver.DBManager.Logger.Error("Error executing Count/Acquire on DB %s: %v\n", shardPath, err)
 				return nil, &errors.InternalError
 			}
 			defer driver.DBManager.Release(db)
@@ -245,6 +249,7 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 	// Check if DB file exists
 	dbExists, err := driver.DBManager.DBExists(dbPath)
 	if err != nil {
+		driver.DBManager.Logger.Error("Error executing GroupBy/DBExists on DB %s: %v\n", dbPath, err)
 		return nil, &errors.InternalError
 	}
 
@@ -303,6 +308,7 @@ func (driver *Sharded) GroupBy(params database.Params) (*database.Aggregates, er
 			// Get DB shard from manager
 			db, err := driver.DBManager.Acquire(shardPath)
 			if err != nil {
+				driver.DBManager.Logger.Error("Error executing GroupBy/Acquire on DB %s: %v\n", shardPath, err)
 				return nil, &errors.InternalError
 			}
 			defer driver.DBManager.Release(db)
@@ -368,6 +374,7 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 	// Check if DB file exists
 	dbExists, err := driver.DBManager.DBExists(dbPath)
 	if err != nil {
+		driver.DBManager.Logger.Error("Error executing Series/DBExists on DB %s: %v\n", dbPath, err)
 		return nil, &errors.InternalError
 	}
 
@@ -424,6 +431,7 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 			// Get DB shard from manager
 			db, err := driver.DBManager.Acquire(shardPath)
 			if err != nil {
+				driver.DBManager.Logger.Error("Error executing Series/Acquire on DB %s: %v\n", shardPath, err)
 				return nil, &errors.InternalError
 			}
 			defer driver.DBManager.Release(db)
@@ -482,6 +490,7 @@ func (driver *Sharded) Insert(params database.Params, analytic database.Analytic
 	// Get DB from manager
 	db, err := driver.DBManager.Acquire(shardPath)
 	if err != nil {
+		driver.DBManager.Logger.Error("Error executing Insert/Acquire on DB %s: %v\n", shardPath, err)
 		return &errors.InternalError
 	}
 	defer driver.DBManager.Release(db)
@@ -490,6 +499,7 @@ func (driver *Sharded) Insert(params database.Params, analytic database.Analytic
 	err = query.Insert(db.DB, analytic)
 
 	if err != nil {
+		driver.DBManager.Logger.Error("Error executing Insert on DB %s: %v\n", shardPath, err)
 		return &errors.InsertFailed
 	}
 
@@ -506,6 +516,7 @@ func (driver *Sharded) Delete(params database.Params) error {
 	// Check if DB file exists
 	dbExists, err := driver.DBManager.DBExists(dbPath)
 	if err != nil {
+		driver.DBManager.Logger.Error("Error executing Delete/DBExists on DB %s: %v\n", dbPath, err)
 		return &errors.InternalError
 	}
 
