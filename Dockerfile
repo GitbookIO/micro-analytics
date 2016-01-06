@@ -14,4 +14,4 @@ ENV MA_ROOT /opt/data/
 ENV MA_CACHE_DIR /opt/cache/
 
 # Set default command
-CMD /go/bin/micro-analytics
+CMD ["/go/bin/micro-analytics"]
