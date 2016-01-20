@@ -468,6 +468,8 @@ func (driver *Sharded) Series(params database.Params) (*database.Intervals, erro
 		}
 	}
 
+	// Merge time series by Start and End date
+	analytics.Merge()
 	return &analytics, nil
 }
 
