@@ -2,6 +2,7 @@ package database
 
 import (
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -73,4 +74,38 @@ func (l AggregateList) Swap(i, j int) {
 // AggregateList will be ordered by Total descending
 func (l AggregateList) Less(i, j int) bool {
 	return l[i].Total > l[j].Total
+}
+
+// Merge Intervals results
+func (intervals *Intervals) Merge() {
+	merged := make([]Interval, 0)
+
+	for _, value := range intervals.List {
+		// Markers
+		intervalExists := false
+		atInterval := 0
+
+		// Check that Interval already exists in merged
+		for mIndex, mValue := range merged {
+			compareStart := strings.Compare(value.Start, mValue.Start)
+			compareEnd := strings.Compare(value.End, mValue.End)
+
+			if compareStart == 0 && compareEnd == 0 {
+				intervalExists = true
+				atInterval = mIndex
+			}
+		}
+
+		// Add to existing value
+		if intervalExists {
+			merged[atInterval].Total += value.Total
+			merged[atInterval].Unique += value.Unique
+		} else {
+			// Or append to merged
+			merged = append(merged, value)
+		}
+	}
+
+	// Set intervals.List to merged
+	intervals.List = merged
 }
