@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/GitbookIO/diskache"
+	"github.com/GitbookIO/go-sqlpool"
 
 	"github.com/GitbookIO/micro-analytics/database"
 	"github.com/GitbookIO/micro-analytics/database/errors"
@@ -503,6 +504,58 @@ func (driver *Sharded) Insert(params database.Params, analytic database.Analytic
 	if err != nil {
 		driver.DBManager.Logger.Error("Error executing Insert on DB %s: %v\n", shardPath, err)
 		return &errors.InsertFailed
+	}
+
+	return nil
+}
+
+func (driver *Sharded) BulkInsert(analytics map[string][]database.Analytic) error {
+	var acquireErr, insertErr error
+	var db *sqlpool.Resource
+	// Run a bulk insert query for each database
+	for dbName, _analytics := range analytics {
+		// Group database analytics by shards
+		shardedAnalytics := make(map[string][]database.Analytic)
+		for _, analytic := range _analytics {
+			shardName := timeToShardName(analytic.Time)
+			shardedAnalytics[shardName] = append(shardedAnalytics[shardName], analytic)
+		}
+
+		// Run a bulk insert query for each shard
+		for shardName, shardAnalytics := range shardedAnalytics {
+			// Construct DBPath
+			dbPath := manager.DBPath{
+				Name:      dbName,
+				Directory: driver.directory,
+			}
+
+			// Construct shard DBPath
+			shardPath := manager.DBPath{
+				Name:      shardName,
+				Directory: dbPath.String(),
+			}
+
+			// Get DB from manager
+			db, acquireErr = driver.DBManager.Acquire(shardPath)
+			if acquireErr != nil {
+				driver.DBManager.Logger.Error("Error executing Insert/Acquire on DB %s: %v\n", shardPath, acquireErr)
+				continue
+			}
+			defer driver.DBManager.Release(db)
+
+			// Insert data if everything's OK
+			insertErr = query.BulkInsert(db.DB, shardAnalytics)
+			if insertErr != nil {
+				driver.DBManager.Logger.Error("Error executing Insert on DB %s: %v\n", shardPath, insertErr)
+			}
+		}
+	}
+
+	if insertErr != nil {
+		return &errors.InsertFailed
+	}
+	if acquireErr != nil {
+		return &errors.InternalError
 	}
 
 	return nil
