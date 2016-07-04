@@ -51,12 +51,12 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 		Methods("GET").
 		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
-		msg := map[string]string{
-			"message": "Welcome to analytics !",
-			"version": opts.Version,
-		}
-		render(w, msg, nil)
-	})
+			msg := map[string]string{
+				"message": "Welcome to analytics !",
+				"version": opts.Version,
+			}
+			render(w, msg, nil)
+		})
 
 	/////
 	// Query a DB over time
@@ -65,62 +65,62 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 		Methods("GET").
 		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
-		// Get params from URL
-		vars := mux.Vars(req)
-		dbName := vars["dbName"]
+			// Get params from URL
+			vars := mux.Vars(req)
+			dbName := vars["dbName"]
 
-		// Parse request query
-		if err := req.ParseForm(); err != nil {
-			renderError(w, err)
-			return
-		}
-
-		// Get timeRange if provided
-		startTime := req.Form.Get("start")
-		endTime := req.Form.Get("end")
-		intervalStr := req.Form.Get("interval")
-
-		// Convert startTime and endTime to a TimeRange
-		timeRange, err := newTimeRange(startTime, endTime)
-		if err != nil {
-			renderError(w, &webErrors.InvalidTimeFormat)
-			return
-		}
-
-		// Cast interval to an integer
-		// Defaults to 1 day
-		interval := 24 * 60 * 60
-		if len(intervalStr) > 0 {
-			interval, err = strconv.Atoi(intervalStr)
-			if err != nil {
-				renderError(w, &webErrors.InvalidInterval)
+			// Parse request query
+			if err := req.ParseForm(); err != nil {
+				renderError(w, err)
 				return
 			}
-		}
 
-		unique := false
-		if strings.Compare(req.Form.Get("unique"), "true") == 0 {
-			unique = true
-		}
+			// Get timeRange if provided
+			startTime := req.Form.Get("start")
+			endTime := req.Form.Get("end")
+			intervalStr := req.Form.Get("interval")
 
-		// Construct Params object
-		params := database.Params{
-			DBName:    dbName,
-			Interval:  interval,
-			TimeRange: timeRange,
-			Unique:    unique,
-			URL:       req.URL,
-		}
+			// Convert startTime and endTime to a TimeRange
+			timeRange, err := newTimeRange(startTime, endTime)
+			if err != nil {
+				renderError(w, &webErrors.InvalidTimeFormat)
+				return
+			}
 
-		analytics, err := driver.Series(params)
-		if err != nil {
-			renderError(w, normalizeDriverError(err))
-			return
-		}
+			// Cast interval to an integer
+			// Defaults to 1 day
+			interval := 24 * 60 * 60
+			if len(intervalStr) > 0 {
+				interval, err = strconv.Atoi(intervalStr)
+				if err != nil {
+					renderError(w, &webErrors.InvalidInterval)
+					return
+				}
+			}
 
-		// Return query result
-		render(w, analytics, nil)
-	})
+			unique := false
+			if strings.Compare(req.Form.Get("unique"), "true") == 0 {
+				unique = true
+			}
+
+			// Construct Params object
+			params := database.Params{
+				DBName:    dbName,
+				Interval:  interval,
+				TimeRange: timeRange,
+				Unique:    unique,
+				URL:       req.URL,
+			}
+
+			analytics, err := driver.Series(params)
+			if err != nil {
+				renderError(w, normalizeDriverError(err))
+				return
+			}
+
+			// Return query result
+			render(w, analytics, nil)
+		})
 
 	/////
 	// Count for a DB
@@ -129,49 +129,49 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 		Methods("GET").
 		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
-		// Get params from URL
-		vars := mux.Vars(req)
-		dbName := vars["dbName"]
+			// Get params from URL
+			vars := mux.Vars(req)
+			dbName := vars["dbName"]
 
-		// Parse request query
-		if err := req.ParseForm(); err != nil {
-			renderError(w, err)
-			return
-		}
+			// Parse request query
+			if err := req.ParseForm(); err != nil {
+				renderError(w, err)
+				return
+			}
 
-		// Get timeRange if provided
-		startTime := req.Form.Get("start")
-		endTime := req.Form.Get("end")
+			// Get timeRange if provided
+			startTime := req.Form.Get("start")
+			endTime := req.Form.Get("end")
 
-		// Convert startTime and endTime to a TimeRange
-		timeRange, err := newTimeRange(startTime, endTime)
-		if err != nil {
-			renderError(w, &webErrors.InvalidTimeFormat)
-			return
-		}
+			// Convert startTime and endTime to a TimeRange
+			timeRange, err := newTimeRange(startTime, endTime)
+			if err != nil {
+				renderError(w, &webErrors.InvalidTimeFormat)
+				return
+			}
 
-		unique := false
-		if strings.Compare(req.Form.Get("unique"), "true") == 0 {
-			unique = true
-		}
+			unique := false
+			if strings.Compare(req.Form.Get("unique"), "true") == 0 {
+				unique = true
+			}
 
-		// Construct Params object
-		params := database.Params{
-			DBName:    dbName,
-			TimeRange: timeRange,
-			Unique:    unique,
-			URL:       req.URL,
-		}
+			// Construct Params object
+			params := database.Params{
+				DBName:    dbName,
+				TimeRange: timeRange,
+				Unique:    unique,
+				URL:       req.URL,
+			}
 
-		analytics, err := driver.Count(params)
-		if err != nil {
-			renderError(w, normalizeDriverError(err))
-			return
-		}
+			analytics, err := driver.Count(params)
+			if err != nil {
+				renderError(w, normalizeDriverError(err))
+				return
+			}
 
-		// Return query result
-		render(w, analytics, nil)
-	})
+			// Return query result
+			render(w, analytics, nil)
+		})
 
 	/////
 	// Query a DB by property
@@ -180,64 +180,64 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 		Methods("GET").
 		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
-		// Map allowed requests w/ columns names in DB schema
-		allowedProperties := map[string]string{
-			"countries": "countryCode",
-			"platforms": "platform",
-			"domains":   "refererDomain",
-			"events":    "event",
-		}
-		// Get params from URL
-		vars := mux.Vars(req)
-		dbName := vars["dbName"]
-		property := vars["property"]
+			// Map allowed requests w/ columns names in DB schema
+			allowedProperties := map[string]string{
+				"countries": "countryCode",
+				"platforms": "platform",
+				"domains":   "refererDomain",
+				"events":    "event",
+			}
+			// Get params from URL
+			vars := mux.Vars(req)
+			dbName := vars["dbName"]
+			property := vars["property"]
 
-		// Check that property is allowed to be queried
-		property, ok := allowedProperties[property]
-		if !ok {
-			renderError(w, &webErrors.InvalidProperty)
-			return
-		}
+			// Check that property is allowed to be queried
+			property, ok := allowedProperties[property]
+			if !ok {
+				renderError(w, &webErrors.InvalidProperty)
+				return
+			}
 
-		// Parse request query
-		if err := req.ParseForm(); err != nil {
-			renderError(w, err)
-			return
-		}
+			// Parse request query
+			if err := req.ParseForm(); err != nil {
+				renderError(w, err)
+				return
+			}
 
-		// Get timeRange if provided
-		startTime := req.Form.Get("start")
-		endTime := req.Form.Get("end")
+			// Get timeRange if provided
+			startTime := req.Form.Get("start")
+			endTime := req.Form.Get("end")
 
-		timeRange, err := newTimeRange(startTime, endTime)
-		if err != nil {
-			renderError(w, &webErrors.InvalidTimeFormat)
-			return
-		}
+			timeRange, err := newTimeRange(startTime, endTime)
+			if err != nil {
+				renderError(w, &webErrors.InvalidTimeFormat)
+				return
+			}
 
-		unique := false
-		if strings.Compare(req.Form.Get("unique"), "true") == 0 {
-			unique = true
-		}
+			unique := false
+			if strings.Compare(req.Form.Get("unique"), "true") == 0 {
+				unique = true
+			}
 
-		// Construct Params object
-		params := database.Params{
-			DBName:    dbName,
-			Property:  property,
-			TimeRange: timeRange,
-			Unique:    unique,
-			URL:       req.URL,
-		}
+			// Construct Params object
+			params := database.Params{
+				DBName:    dbName,
+				Property:  property,
+				TimeRange: timeRange,
+				Unique:    unique,
+				URL:       req.URL,
+			}
 
-		analytics, err := driver.GroupBy(params)
-		if err != nil {
-			renderError(w, normalizeDriverError(err))
-			return
-		}
+			analytics, err := driver.GroupBy(params)
+			if err != nil {
+				renderError(w, normalizeDriverError(err))
+				return
+			}
 
-		// Return query result
-		render(w, analytics, nil)
-	})
+			// Return query result
+			render(w, analytics, nil)
+		})
 
 	/////
 	// Full query a DB
@@ -246,41 +246,41 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 		Methods("GET").
 		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
-		// Get dbName from URL
-		vars := mux.Vars(req)
-		dbName := vars["dbName"]
+			// Get dbName from URL
+			vars := mux.Vars(req)
+			dbName := vars["dbName"]
 
-		// Parse request query
-		if err := req.ParseForm(); err != nil {
-			renderError(w, err)
-			return
-		}
+			// Parse request query
+			if err := req.ParseForm(); err != nil {
+				renderError(w, err)
+				return
+			}
 
-		// Get timeRange if provided
-		startTime := req.Form.Get("start")
-		endTime := req.Form.Get("end")
+			// Get timeRange if provided
+			startTime := req.Form.Get("start")
+			endTime := req.Form.Get("end")
 
-		timeRange, err := newTimeRange(startTime, endTime)
-		if err != nil {
-			renderError(w, &webErrors.InvalidTimeFormat)
-			return
-		}
+			timeRange, err := newTimeRange(startTime, endTime)
+			if err != nil {
+				renderError(w, &webErrors.InvalidTimeFormat)
+				return
+			}
 
-		// Construct Params object
-		params := database.Params{
-			DBName:    dbName,
-			TimeRange: timeRange,
-			URL:       req.URL,
-		}
+			// Construct Params object
+			params := database.Params{
+				DBName:    dbName,
+				TimeRange: timeRange,
+				URL:       req.URL,
+			}
 
-		analytics, err := driver.Query(params)
-		if err != nil {
-			renderError(w, normalizeDriverError(err))
-			return
-		}
+			analytics, err := driver.Query(params)
+			if err != nil {
+				renderError(w, normalizeDriverError(err))
+				return
+			}
 
-		render(w, analytics, nil)
-	})
+			render(w, analytics, nil)
+		})
 
 	/////
 	// Push a list of analytics to different DBs
@@ -289,51 +289,53 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 		Methods("POST").
 		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
-		// Parse JSON POST data
-		postList := PostAnalytics{}
-		jsonDecoder := json.NewDecoder(req.Body)
-		err := jsonDecoder.Decode(&postList)
+			// Parse JSON POST data
+			postList := PostAnalytics{}
+			jsonDecoder := json.NewDecoder(req.Body)
+			err := jsonDecoder.Decode(&postList)
 
-		// Invalid JSON
-		if err != nil {
-			renderError(w, &webErrors.InvalidJSON)
-			return
-		}
-
-		for _, postData := range postList.List {
-			// Create Analytic to inject in DB
-			analytic := database.Analytic{
-				Time:          time.Unix(int64(postData.Time), 0).UTC(),
-				Event:         postData.Event,
-				Path:          postData.Path,
-				Ip:            postData.Ip,
-				Platform:      postData.Platform,
-				RefererDomain: postData.RefererDomain,
-				CountryCode:   postData.CountryCode,
-			}
-
-			// Get countryCode from GeoIp
-			analytic.CountryCode, err = geoip.GeoIpLookup(geolite2, postData.Ip)
+			// Invalid JSON
 			if err != nil {
-				log.Error("Error [%v] looking for countryCode for IP %s", postData.Ip)
+				renderError(w, &webErrors.InvalidJSON)
+				return
 			}
 
-			// Construct Params object
-			params := database.Params{
-				DBName: postData.Website,
+			// Group analytics by website
+			analytics := make(map[string][]database.Analytic)
+
+			for _, postData := range postList.List {
+				// Create Analytic to inject in DB
+				analytic := database.Analytic{
+					Time:          time.Unix(int64(postData.Time), 0).UTC(),
+					Event:         postData.Event,
+					Path:          postData.Path,
+					Ip:            postData.Ip,
+					Platform:      postData.Platform,
+					RefererDomain: postData.RefererDomain,
+					CountryCode:   postData.CountryCode,
+				}
+
+				// Get countryCode from GeoIp
+				analytic.CountryCode, err = geoip.GeoIpLookup(geolite2, postData.Ip)
+				if err != nil {
+					log.Error("Error [%v] looking for countryCode for IP %s", postData.Ip)
+				}
+
+				// Add to list
+				analytics[postData.Website] = append(analytics[postData.Website], analytic)
 			}
 
-			err = driver.Insert(params, analytic)
+			// Insert
+			err = driver.BulkInsert(analytics)
 			if err != nil {
 				renderError(w, normalizeDriverError(err))
 				return
 			}
 
-			log.Info("Successfully inserted analytic: %#v", analytic)
-		}
+			log.Info("Successfully inserted analytics: %#v", analytics)
 
-		render(w, nil, nil)
-	})
+			render(w, nil, nil)
+		})
 
 	/////
 	// Push analytics to a specific DB
@@ -342,103 +344,47 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 		Methods("POST").
 		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
-		// Get dbName from URL
-		vars := mux.Vars(req)
-		dbName := vars["dbName"]
+			// Get dbName from URL
+			vars := mux.Vars(req)
+			dbName := vars["dbName"]
 
-		// Parse JSON POST data
-		postData := PostData{}
-		jsonDecoder := json.NewDecoder(req.Body)
-		err := jsonDecoder.Decode(&postData)
+			// Parse JSON POST data
+			postData := PostData{}
+			jsonDecoder := json.NewDecoder(req.Body)
+			err := jsonDecoder.Decode(&postData)
 
-		// Invalid JSON
-		if err != nil {
-			renderError(w, &webErrors.InvalidJSON)
-			return
-		}
+			// Invalid JSON
+			if err != nil {
+				renderError(w, &webErrors.InvalidJSON)
+				return
+			}
 
-		// Create Analytic to inject in DB
-		analytic := database.Analytic{
-			Time:  time.Now(),
-			Event: postData.Event,
-			Path:  postData.Path,
-			Ip:    postData.Ip,
-		}
-
-		// Set time from POST data if passed
-		if len(postData.Time) > 0 {
-			analytic.Time, _ = time.Parse(time.RFC3339, postData.Time)
-		}
-		analytic.Time = analytic.Time.UTC()
-
-		// Set analytic referer domain
-		refererHeader := getReferrer(postData.Headers)
-		if referrerURL, err := url.ParseRequestURI(refererHeader); err == nil {
-			analytic.RefererDomain = referrerURL.Host
-		}
-
-		// Extract analytic platform from userAgent
-		userAgent := getUserAgent(postData.Headers)
-		analytic.Platform = utils.Platform(userAgent)
-
-		// Get countryCode from GeoIp
-		analytic.CountryCode, err = geoip.GeoIpLookup(geolite2, postData.Ip)
-
-		// Construct Params object
-		params := database.Params{
-			DBName: dbName,
-		}
-
-		err = driver.Insert(params, analytic)
-		if err != nil {
-			renderError(w, normalizeDriverError(err))
-			return
-		}
-
-		log.Info("Successfully inserted analytic: %#v", analytic)
-
-		render(w, nil, nil)
-	})
-
-	/////
-	// Push a list of analytics to a specific DB
-	/////
-	r.Path("/{dbName}/bulk").
-		Methods("POST").
-		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-
-		// Get dbName from URL
-		vars := mux.Vars(req)
-		dbName := vars["dbName"]
-
-		// Parse JSON POST data
-		postList := PostAnalytics{}
-		jsonDecoder := json.NewDecoder(req.Body)
-		err := jsonDecoder.Decode(&postList)
-
-		// Invalid JSON
-		if err != nil {
-			renderError(w, &webErrors.InvalidJSON)
-			return
-		}
-
-		for _, postData := range postList.List {
 			// Create Analytic to inject in DB
 			analytic := database.Analytic{
-				Time:          time.Unix(int64(postData.Time), 0).UTC(),
-				Event:         postData.Event,
-				Path:          postData.Path,
-				Ip:            postData.Ip,
-				Platform:      postData.Platform,
-				RefererDomain: postData.RefererDomain,
-				CountryCode:   postData.CountryCode,
+				Time:  time.Now(),
+				Event: postData.Event,
+				Path:  postData.Path,
+				Ip:    postData.Ip,
 			}
+
+			// Set time from POST data if passed
+			if len(postData.Time) > 0 {
+				analytic.Time, _ = time.Parse(time.RFC3339, postData.Time)
+			}
+			analytic.Time = analytic.Time.UTC()
+
+			// Set analytic referer domain
+			refererHeader := getReferrer(postData.Headers)
+			if referrerURL, err := url.ParseRequestURI(refererHeader); err == nil {
+				analytic.RefererDomain = referrerURL.Host
+			}
+
+			// Extract analytic platform from userAgent
+			userAgent := getUserAgent(postData.Headers)
+			analytic.Platform = utils.Platform(userAgent)
 
 			// Get countryCode from GeoIp
 			analytic.CountryCode, err = geoip.GeoIpLookup(geolite2, postData.Ip)
-			if err != nil {
-				log.Error("Error [%v] looking for countryCode for IP %s", postData.Ip)
-			}
 
 			// Construct Params object
 			params := database.Params{
@@ -452,10 +398,66 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 			}
 
 			log.Info("Successfully inserted analytic: %#v", analytic)
-		}
 
-		render(w, nil, nil)
-	})
+			render(w, nil, nil)
+		})
+
+	/////
+	// Push a list of analytics to a specific DB
+	/////
+	r.Path("/{dbName}/bulk").
+		Methods("POST").
+		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+
+			// Get dbName from URL
+			vars := mux.Vars(req)
+			dbName := vars["dbName"]
+
+			// Parse JSON POST data
+			postList := PostAnalytics{}
+			jsonDecoder := json.NewDecoder(req.Body)
+			err := jsonDecoder.Decode(&postList)
+
+			// Invalid JSON
+			if err != nil {
+				renderError(w, &webErrors.InvalidJSON)
+				return
+			}
+
+			for _, postData := range postList.List {
+				// Create Analytic to inject in DB
+				analytic := database.Analytic{
+					Time:          time.Unix(int64(postData.Time), 0).UTC(),
+					Event:         postData.Event,
+					Path:          postData.Path,
+					Ip:            postData.Ip,
+					Platform:      postData.Platform,
+					RefererDomain: postData.RefererDomain,
+					CountryCode:   postData.CountryCode,
+				}
+
+				// Get countryCode from GeoIp
+				analytic.CountryCode, err = geoip.GeoIpLookup(geolite2, postData.Ip)
+				if err != nil {
+					log.Error("Error [%v] looking for countryCode for IP %s", postData.Ip)
+				}
+
+				// Construct Params object
+				params := database.Params{
+					DBName: dbName,
+				}
+
+				err = driver.Insert(params, analytic)
+				if err != nil {
+					renderError(w, normalizeDriverError(err))
+					return
+				}
+
+				log.Info("Successfully inserted analytic: %#v", analytic)
+			}
+
+			render(w, nil, nil)
+		})
 
 	/////
 	// Delete a DB
@@ -464,23 +466,23 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 		Methods("DELETE").
 		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
-		// Get dbName from URL
-		vars := mux.Vars(req)
-		dbName := vars["dbName"]
+			// Get dbName from URL
+			vars := mux.Vars(req)
+			dbName := vars["dbName"]
 
-		// Construct Params object
-		params := database.Params{
-			DBName: dbName,
-		}
+			// Construct Params object
+			params := database.Params{
+				DBName: dbName,
+			}
 
-		err := driver.Delete(params)
-		if err != nil {
-			renderError(w, normalizeDriverError(err))
-			return
-		}
+			err := driver.Delete(params)
+			if err != nil {
+				renderError(w, normalizeDriverError(err))
+				return
+			}
 
-		render(w, nil, nil)
-	})
+			render(w, nil, nil)
+		})
 
 	return r, nil
 }
