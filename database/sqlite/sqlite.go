@@ -1,6 +1,8 @@
 package sqlite
 
 import (
+	"github.com/GitbookIO/go-sqlpool"
+
 	"github.com/GitbookIO/micro-analytics/database"
 	"github.com/GitbookIO/micro-analytics/database/errors"
 
@@ -194,6 +196,39 @@ func (driver *SQLite) Insert(params database.Params, analytic database.Analytic)
 
 	if err != nil {
 		return &errors.InsertFailed
+	}
+
+	return nil
+}
+
+func (driver *SQLite) BulkInsert(analytics map[string][]database.Analytic) error {
+	var acquireErr, insertErr error
+	var db *sqlpool.Resource
+	// Run a bulk insert query for each database
+	for dbName, _analytics := range analytics {
+		// Construct DBPath
+		dbPath := manager.DBPath{
+			Name:      dbName,
+			Directory: driver.directory,
+		}
+
+		// Get DB from manager
+		db, acquireErr = driver.DBManager.Acquire(dbPath)
+		if acquireErr != nil {
+			// Impossible to get database, process next analytics
+			continue
+		}
+		defer driver.DBManager.Release(db)
+
+		// Insert data if everything's OK
+		insertErr = query.BulkInsert(db.DB, _analytics)
+	}
+
+	if insertErr != nil {
+		return &errors.InsertFailed
+	}
+	if acquireErr != nil {
+		return &errors.InternalError
 	}
 
 	return nil
