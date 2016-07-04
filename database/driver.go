@@ -11,6 +11,8 @@ type Driver interface {
 	Query(params Params) (*Analytics, error)
 	// Handle adding new stats
 	Insert(params Params, analytic Analytic) error
+	// Handle bulk insert
+	BulkInsert(analytics map[string][]Analytic) error
 	// Handle DB removal
 	Delete(params Params) error
 }
