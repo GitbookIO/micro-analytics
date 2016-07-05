@@ -452,10 +452,13 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 				return
 			}
 
+			// Create map of analytics for Bulk insert
+			analytics := make(map[string][]database.Analytic, 1)
+
 			for _, postData := range postList.List {
 				// Create Analytic to inject in DB
 				analytic := database.Analytic{
-					Time:          time.Unix(int64(postData.Time), 0).UTC(),
+					Time:          time.Now(),
 					Event:         postData.Event,
 					Path:          postData.Path,
 					Ip:            postData.Ip,
@@ -464,25 +467,52 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 					CountryCode:   postData.CountryCode,
 				}
 
+				// Set time from POST data if passed
+				if len(postData.Time) > 0 {
+					// Try to parse time as an RFC format or a Unix timestamp
+					analytic.Time, err = parseTime(postData.Time)
+					if err != nil {
+						// Reset to current time if format is invalid
+						analytic.Time = time.Now()
+					}
+				}
+				analytic.Time = analytic.Time.UTC()
+
+				// Use headers if provided
+				if len(postData.Headers) > 0 {
+					// Set analytic referer domain
+					if analytic.RefererDomain == "" {
+						refererHeader := getReferrer(postData.Headers)
+						if referrerURL, err := url.ParseRequestURI(refererHeader); err == nil {
+							analytic.RefererDomain = referrerURL.Host
+						}
+					}
+
+					// Extract analytic platform from userAgent
+					if analytic.Platform == "" {
+						userAgent := getUserAgent(postData.Headers)
+						analytic.Platform = utils.Platform(userAgent)
+					}
+				}
+
 				// Get countryCode from GeoIp
 				analytic.CountryCode, err = geoip.GeoIpLookup(geolite2, postData.Ip)
 				if err != nil {
 					log.Error("Error [%v] looking for countryCode for IP %s", postData.Ip)
 				}
 
-				// Construct Params object
-				params := database.Params{
-					DBName: dbName,
-				}
-
-				err = driver.Insert(params, analytic)
-				if err != nil {
-					renderError(w, normalizeDriverError(err))
-					return
-				}
-
-				log.Info("Successfully inserted analytic: %#v", analytic)
+				// Add analytic to list
+				analytics[dbName] = append(analytics[dbName], analytic)
 			}
+
+			// Insert
+			err = driver.BulkInsert(analytics)
+			if err != nil {
+				renderError(w, normalizeDriverError(err))
+				return
+			}
+
+			log.Info("Successfully inserted analytics: %#v", analytics)
 
 			render(w, nil, nil)
 		})
