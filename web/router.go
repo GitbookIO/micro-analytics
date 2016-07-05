@@ -306,7 +306,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 			for _, postData := range postList.List {
 				// Create Analytic to inject in DB
 				analytic := database.Analytic{
-					Time:          time.Unix(int64(postData.Time), 0).UTC(),
+					Time:          time.Now(),
 					Event:         postData.Event,
 					Path:          postData.Path,
 					Ip:            postData.Ip,
@@ -314,6 +314,17 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 					RefererDomain: postData.RefererDomain,
 					CountryCode:   postData.CountryCode,
 				}
+
+				// Set time from POST data if passed
+				if len(postData.Time) > 0 {
+					// Try to parse time as an RFC format
+					analytic.Time, err = parseTime(postData.Time)
+					if err != nil {
+						// Reset to current time if invalid
+						analytic.Time = time.Now()
+					}
+				}
+				analytic.Time = analytic.Time.UTC()
 
 				// Get countryCode from GeoIp
 				analytic.CountryCode, err = geoip.GeoIpLookup(geolite2, postData.Ip)
