@@ -82,6 +82,7 @@ Name | Type | Description | Default | Example
 The dates can be passed either as:
  - ISO (RFC3339) `"2015-11-20T12:00:00.000Z"`
  - UTC (RFC1123) `"Fri, 20 Nov 2015 12:00:00 GMT"`
+ - A Unix timestamp as a String `"1448020800"`
 
 ##### Common Aggregation Parameters
 
@@ -265,7 +266,7 @@ Insert new data for the specified website.
     "ip": "127.0.0.1",
     "path": "/README.md",
     "headers": {
-        ...
+        // ...
         // HTTP headers received from your visitor
     }
 }
@@ -278,7 +279,17 @@ The `countryCode` will be deduced from the passed `ip` parameter using [Maxmind'
 
 #### POST `/:website/bulk`
 
-Insert a list of analytics for a specific website. The analytics must be in DB format.
+Insert a list of analytics for a specific website. The analytics can be sent directly in DB format, with `time` being a String value.
+
+`time` can be passed as either:
+ - ISO (RFC3339) `"2015-11-20T12:00:00.000Z"`
+ - UTC (RFC1123) `"Fri, 20 Nov 2015 12:00:00 GMT"`
+ - A Unix timestamp as a String `"1448020800"`
+
+If the `time` parameter is not provided, it will be defaulted to the exact time of the server processing the `POST` request.
+
+As for the `POST /:website` method, the analytics can also have an optional `headers` parameter.
+If the `refererDomain` and/or `platform` values are not passed in the JSON body, the `headers` parameter will be used to set these values automatically.
 
 ##### POST Body
 
@@ -286,7 +297,7 @@ Insert a list of analytics for a specific website. The analytics must be in DB f
 {
     "list": [
         {
-            "time": 1450098642,
+            "time": "1450098642",
             "ip": "127.0.0.1",
             "event": "download",
             "path": "/somewhere",
@@ -295,23 +306,24 @@ Insert a list of analytics for a specific website. The analytics must be in DB f
             "countryCode": "fr"
         },
         {
-            "time": 0,
+            "time": "2015-11-20T12:00:00.000Z",
             "ip": "127.0.0.1",
             "event": "login",
             "path": "/someplace",
-            "platform": "Linux",
-            "refererDomain": "www.gitbook.com",
-            "countryCode": "us"
+            "headers": {
+                // ...
+                // HTTP headers received from your visitor
+            }
         }
     ]
 }
 ```
 
-The passed `time` value must be a Unix timestamp in seconds. The `countryCode` will be reprocessed by the service using GeoLite2 based on the `ip`.
+The `countryCode` will be reprocessed by the service using GeoLite2 based on the `ip`.
 
 #### POST `/bulk`
 
-Insert a list of analytics for different websites. The analytics must be in DB format.
+Insert a list of analytics for different websites. The analytics have the same format as `POST /:website/bulk`, with a mandatory `website` parameter.
 
 ##### POST Body
 
@@ -320,7 +332,7 @@ Insert a list of analytics for different websites. The analytics must be in DB f
     "list": [
         {
             "website": "website-1",
-            "time": 1450098642,
+            "time": "1450098642",
             "ip": "127.0.0.1",
             "event": "download",
             "path": "/somewhere",
@@ -330,19 +342,17 @@ Insert a list of analytics for different websites. The analytics must be in DB f
         },
         {
             "website": "website-2",
-            "time": 0,
+            "time": "2015-11-20T12:00:00.000Z",
             "ip": "127.0.0.1",
             "event": "login",
             "path": "/someplace",
-            "platform": "Linux",
-            "refererDomain": "www.gitbook.com",
-            "countryCode": "us"
+            "headers": {
+                // ...
+            }
         }
     ]
 }
 ```
-
-The same rules as above apply for `time` and `countryCode` with this m
 
 ### DELETE requests
 
