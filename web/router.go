@@ -326,6 +326,23 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 				}
 				analytic.Time = analytic.Time.UTC()
 
+				// Use headers if provided
+				if len(postData.Headers) > 0 {
+					// Set analytic referer domain
+					if analytic.RefererDomain == "" {
+						refererHeader := getReferrer(postData.Headers)
+						if referrerURL, err := url.ParseRequestURI(refererHeader); err == nil {
+							analytic.RefererDomain = referrerURL.Host
+						}
+					}
+
+					// Extract analytic platform from userAgent
+					if analytic.Platform == "" {
+						userAgent := getUserAgent(postData.Headers)
+						analytic.Platform = utils.Platform(userAgent)
+					}
+				}
+
 				// Get countryCode from GeoIp
 				analytic.CountryCode, err = geoip.GeoIpLookup(geolite2, postData.Ip)
 				if err != nil {
