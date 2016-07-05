@@ -590,7 +590,7 @@ func parseTime(timeStr string) (time.Time, error) {
 		timeValue, err = time.Parse(time.RFC1123, timeStr)
 		if err != nil {
 			// Try to parse as a Unix timestamp
-			if intTime, err := strconv.Atoi(postData.Time); err == nil {
+			if intTime, err := strconv.Atoi(timeStr); err == nil {
 				timeValue = time.Unix(int64(intTime), 0)
 			}
 		}
