@@ -523,13 +523,19 @@ func newTimeRange(start string, end string) (*database.TimeRange, error) {
 	return &timeRange, nil
 }
 
-// Try to parse a time string as RFC3339 or RFC1123
+// Try to parse a time string as RFC3339 or RFC1123 or a Unix timestamp
 func parseTime(timeStr string) (time.Time, error) {
 	// Try to parse as RFC3339
 	timeValue, err := time.Parse(time.RFC3339, timeStr)
 	if err != nil {
 		// Try to parse as RFC1123
 		timeValue, err = time.Parse(time.RFC1123, timeStr)
+		if err != nil {
+			// Try to parse as a Unix timestamp
+			if intTime, err := strconv.Atoi(postData.Time); err == nil {
+				timeValue = time.Unix(int64(intTime), 0)
+			}
+		}
 	}
 	return timeValue.UTC(), err
 }
