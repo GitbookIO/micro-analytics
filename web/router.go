@@ -304,6 +304,12 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 			analytics := make(map[string][]database.Analytic)
 
 			for _, postData := range postList.List {
+				// Skip analytic if website parameter missing
+				if postData.Website == "" {
+					log.Error("Skipping analytic: website parameter missing on POST data")
+					continue
+				}
+
 				// Parse data
 				analytic := parseAnalytic(postData, log)
 
