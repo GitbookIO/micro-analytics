@@ -311,7 +311,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 				}
 
 				// Parse data
-				analytic := parseAnalytic(postData, log)
+				analytic := parseAnalytic(postData, geolite2, log)
 
 				// Add to list
 				analytics[postData.Website] = append(analytics[postData.Website], analytic)
@@ -421,7 +421,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 
 			for _, postData := range postList.List {
 				// Parse data
-				analytic := parseAnalytic(postData, log)
+				analytic := parseAnalytic(postData, geolite2, log)
 
 				// Add analytic to list
 				analytics[dbName] = append(analytics[dbName], analytic)
@@ -469,7 +469,7 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 
 // parseAnalytic takes a structures.PostAnalytic from a POST request
 // and returns a database.Analytic ready struct to feed the driver
-func parseAnalytic(postData structures.PostAnalytic, log *logger.Logger) database.Analytic {
+func parseAnalytic(postData PostAnalytic, geolite2 *maxminddb.Reader, log *logger.Logger) database.Analytic {
 	// Create Analytic to inject in DB
 	analytic := database.Analytic{
 		Time:          time.Now(),
@@ -481,6 +481,7 @@ func parseAnalytic(postData structures.PostAnalytic, log *logger.Logger) databas
 		CountryCode:   postData.CountryCode,
 	}
 
+	var err error
 	// Set time from POST data if passed
 	if len(postData.Time) > 0 {
 		// Try to parse time as an RFC format or a Unix timestamp
