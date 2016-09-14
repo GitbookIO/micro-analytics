@@ -689,9 +689,8 @@ func formatURLForCache(uRL *url.URL, shardName int, startMonth int, endMonth int
 func isStartOfMonth(t time.Time) bool {
 	y := t.Year()
 	m := t.Month()
-	d := t.Day()
 	utcLoc, _ := time.LoadLocation("UTC")
-	startOfMonth := time.Date(y, m, d, 0, 0, 0, 0, utcLoc)
+	startOfMonth := time.Date(y, m, 1, 0, 0, 0, 0, utcLoc)
 	return t.Equal(startOfMonth)
 }
 
