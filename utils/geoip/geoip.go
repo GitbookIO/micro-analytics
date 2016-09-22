@@ -39,10 +39,17 @@ func GetGeoLite2Reader() (*maxminddb.Reader, error) {
 func GeoIpLookup(geolite2 *maxminddb.Reader, ipStr string) (string, error) {
 	var log = logger.New("[GeoIP]")
 
+	// Try to split port from ipStr
+	host, _, err := net.SplitHostPort(ipStr)
+	// Found a port in ipStr, update
+	if err == nil {
+		ipStr = host
+	}
+
 	ip := net.ParseIP(ipStr)
 
 	result := lookupResult{}
-	err := geolite2.Lookup(ip, &result)
+	err = geolite2.Lookup(ip, &result)
 	if err != nil {
 		log.Error("Unable to lookup for IP %s: [%v]", ipStr, err)
 		return "", err
