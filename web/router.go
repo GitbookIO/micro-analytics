@@ -296,6 +296,8 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 
 			// Invalid JSON
 			if err != nil {
+				log.Error("Invalid JSON format")
+				log.Error("%v", err)
 				renderError(w, &webErrors.InvalidJSON)
 				return
 			}
@@ -347,6 +349,8 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 
 			// Invalid JSON
 			if err != nil {
+				log.Error("Invalid JSON format")
+				log.Error("%v", err)
 				renderError(w, &webErrors.InvalidJSON)
 				return
 			}
@@ -412,6 +416,8 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 
 			// Invalid JSON
 			if err != nil {
+				log.Error("Invalid JSON format:")
+				log.Error("%v", err)
 				renderError(w, &webErrors.InvalidJSON)
 				return
 			}
