@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 	"github.com/oschwald/maxminddb-golang"
 
 	"github.com/GitbookIO/micro-analytics/database"
@@ -21,7 +22,16 @@ type ServerOpts struct {
 
 // Build a http.Server based on the options
 func NewServer(opts ServerOpts) (*http.Server, error) {
-	// Define handler
+	// Create base router
+	r := mux.NewRouter()
+
+	// Hello world
+	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"message":"Welcome to micro-analytics!", "version":"` + opts.Version + `"}`))
+	})
+
+	// Define private routes handler
 	routerOpts := web.RouterOpts{
 		DriverOpts:     opts.DriverOpts,
 		Geolite2Reader: opts.Geolite2Reader,
@@ -33,16 +43,20 @@ func NewServer(opts ServerOpts) (*http.Server, error) {
 		return nil, err
 	}
 
-	// Use logging
-	handler = handlers.LoggingHandler(os.Stderr, handler)
-
 	// Use authentication if username provided
 	if len(opts.Auth.Name) > 0 {
 		handler = web.BasicAuthMiddleware(opts.Auth, handler)
 	}
 
+	// Attach to main router
+	r.PathPrefix("/").Handler(handler)
+
+	// Use logging
+	handler = handlers.LoggingHandler(os.Stderr, r)
+
+
 	return &http.Server{
 		Addr:    opts.Port,
-		Handler: handler,
+		Handler: r,
 	}, nil
 }

@@ -45,20 +45,6 @@ func NewRouter(opts RouterOpts) (http.Handler, error) {
 	}
 
 	/////
-	// Welcome
-	/////
-	r.Path("/").
-		Methods("GET").
-		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-
-			msg := map[string]string{
-				"message": "Welcome to analytics !",
-				"version": opts.Version,
-			}
-			render(w, msg, nil)
-		})
-
-	/////
 	// Query a DB over time
 	/////
 	r.Path("/{dbName}/time").
