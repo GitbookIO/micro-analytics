@@ -8,7 +8,7 @@ import (
 	"syscall"
 
 	"github.com/azer/logger"
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 	"github.com/facebookgo/grace/gracehttp"
 
 	"github.com/GitbookIO/micro-analytics/database"
