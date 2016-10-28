@@ -57,6 +57,6 @@ func NewServer(opts ServerOpts) (*http.Server, error) {
 
 	return &http.Server{
 		Addr:    opts.Port,
-		Handler: r,
+		Handler: handler,
 	}, nil
 }
